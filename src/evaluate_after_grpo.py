@@ -127,6 +127,9 @@ def _evaluate_one(
     vc = validate_agent_candidate(gen_result)
     result["raw_model_response"] = vc["raw_response"]
     result["predicted_sql"] = vc["sql"]
+    # Take only the first statement (model sometimes outputs multiple SQL)
+    if result["predicted_sql"]:
+        result["predicted_sql"] = result["predicted_sql"].split(";")[0].strip() + ";"
     result["parse_success"] = vc["parse_success"]
     result["parse_method"] = vc["parse_method"]
     result["generation_seconds"] = round(vc["generation_seconds"], 4)
