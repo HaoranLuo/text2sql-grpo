@@ -41,6 +41,8 @@ KNOWN_EXPERIMENTS = {
     "p2c2_partial": {"model": "Qwen2.5-Coder-3B", "method": "GRPO 100条G8partial", "family": "3B"},
     "c3_atomic": {"model": "Qwen2.5-Coder-3B", "method": "GRPO 100条G4原子奖励", "family": "3B"},
     "eval_5prompt_3b_trained": {"model": "Qwen2.5-Coder-3B", "method": "训练后3B 5prompt投票", "family": "3B"},
+    "eval_rev_baseline": {"model": "Qwen2.5-Coder-3B", "method": "修复验证: 3B基线重跑", "family": "3B"},
+    "eval_rev_trained": {"model": "Qwen2.5-Coder-3B", "method": "修复验证: 训练后3B重跑", "family": "3B"},
 }
 
 
