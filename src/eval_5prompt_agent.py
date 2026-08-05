@@ -89,6 +89,7 @@ def main():
     parser.add_argument('--lora-path', required=True, help='LoRA adapter 目录（含 checkpoint）')
     parser.add_argument('--output-dir', required=True, help='输出目录')
     parser.add_argument('--limit', type=int, default=100)
+    parser.add_argument('--start-index', type=int, default=0)
     parser.add_argument('--max-new-tokens', type=int, default=256)
     parser.add_argument('--n-prompts', type=int, default=5, choices=[5, 7],
                         help='投票用多少个 prompt 视角 (5 或 7)')
@@ -97,8 +98,9 @@ def main():
     lora = args.lora_path
     out_dir = Path(args.output_dir)
     limit = args.limit
+    start_index = args.start_index
     n_prompts = args.n_prompts
-    print(f"{n_prompts}prompt投票 | LoRA: {lora} | {limit} 条")
+    print(f"{n_prompts}prompt投票 | LoRA: {lora} | {limit} 条 (start={start_index})")
 
     from peft import PeftModel
     tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL, local_files_only=True, trust_remote_code=True)
@@ -113,7 +115,7 @@ def main():
 
     loader = SpiderLoader(SPIDER)
     executor = DatabaseExecutor(SPIDER)
-    items = loader.load_dev(limit=limit, start_index=0)
+    items = loader.load_dev(limit=limit, start_index=start_index)
 
     match_count = 0
     results = []
@@ -177,6 +179,7 @@ def main():
     with open(out_dir / 'summary.json', 'w') as f:
         json.dump({'method': '5prompt_vote', 'lora': lora,
                    'match_rate': rate, 'match_count': match_count,
+                   'start_index': start_index, 'limit': limit,
                    'elapsed_seconds': round(elapsed, 1)}, f, indent=2)
     with open(out_dir / 'items.json', 'w') as f:
         json.dump(results, f, indent=2)

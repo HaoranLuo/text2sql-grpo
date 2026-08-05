@@ -1,11 +1,11 @@
 #!/bin/bash
 #SBATCH --job-name=7p500
-#SBATCH --partition=aiaca40
-#SBATCH --qos=1a40
+#SBATCH --partition=gpudebug
+#SBATCH --qos=gpudebug
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=32G
-#SBATCH --time=03:00:00
+#SBATCH --time=00:59:00
 #SBATCH --output=/gpfs/work/aac/jiahuiwang24/reasoning_generator_3b/logs/7p500_%j.out
 #SBATCH --error=/gpfs/work/aac/jiahuiwang24/reasoning_generator_3b/logs/7p500_%j.err
 
