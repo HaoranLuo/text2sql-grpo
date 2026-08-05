@@ -1,0 +1,53 @@
+{
+  "model": "Qwen2.5-Coder-3B-Instruct",
+  "model_path": "/gpfs/work/aac/jiahuiwang24/reasoning_generator_3b/models/Qwen2.5-Coder-3B-Instruct",
+  "input": {
+    "question": "List the names of students who are older than 20 and major in Computer Science. Order the names alphabetically.",
+    "ddl_schema": "CREATE TABLE students (student_id INTEGER PRIMARY KEY, name TEXT, age INTEGER, major TEXT); CREATE TABLE scores (score_id INTEGER PRIMARY KEY, student_id INTEGER, course TEXT, score REAL, FOREIGN KEY (student_id) REFERENCES students(student_id));",
+    "schema_links": [
+      "students.name",
+      "students.age",
+      "students.major"
+    ],
+    "evidence": null,
+    "dialect": "sqlite",
+    "candidate_count": 1
+  },
+  "candidates": [
+    {
+      "candidate_id": 0,
+      "raw_response": "Let's break down the task and generate the SQL query step-by-step:\n\n### Task Breakdown\n\n1. **Identify Required Tables and Columns:**\n   - We need to retrieve data from the `students` table.\n   - The required columns are `name`, `age`, and `major`.\n\n2. **Determine Filters:**\n   - We need to filter students who are older than 20.\n   - We also need to filter students who are majoring in Computer Science.\n\n3. **Order the Results:**\n   - We need to order the results alphabetically by the student's name.\n\n4. **Construct the SQL Query:**\n   - Use the `SELECT` statement to specify the columns we want to retrieve.\n   - Use the `FROM` clause to specify the `students` table.\n   - Use the `WHERE` clause to apply the filters.\n   - Use the `ORDER BY` clause to sort the results.\n\n### Step-by-Step Reasoning\n\n1. **Select Columns:**\n   - We need to select the `name` column from the `students` table.\n\n2. **Specify the Table:**\n   - The data is stored in the `students` table, so we use `FROM students`.\n\n3. **Apply Filters:**\n   - We need to filter students who are older than 20, so we add `WHERE age > 20`.\n   - We also need to filter students who are majoring in Computer Science, so we add `AND major = 'Computer Science'`.\n\n4. **Order the Results:**\n   - We need to order the results alphabetically by the student's name, so we add `ORDER BY name ASC`.\n\n### Final SQL Query\n\n```sql\nSELECT name FROM students WHERE age > 20 AND major = 'Computer Science' ORDER BY name ASC;\n```\n\n### Explanation\n\n- **SELECT name:** We select the `name` column from the `students` table.\n- **FROM students:** We specify the `students` table as the source of our data.\n- **WHERE age > 20 AND major = 'Computer Science':** We apply the two filters to narrow down the results to students older than 20 and majoring in Computer Science.\n- **ORDER BY name ASC:** We order the results alphabetically by the `name` column in ascending order.\n\nThis query efficiently retrieves the required information using the minimum number of tables and columns, adhering to the given constraints.",
+      "sql": "SELECT name FROM students WHERE age > 20 AND major = 'Computer Science' ORDER BY name ASC;",
+      "parse_success": true,
+      "parse_method": "sql_code_block"
+    }
+  ],
+  "metadata": {
+    "model_load_seconds": 3.25,
+    "generation_seconds": 14.09,
+    "gpu": "NVIDIA A40",
+    "gpu_memory_gib": 5.86,
+    "decoding": "greedy"
+  },
+  "evaluation": {
+    "execution_success": true,
+    "execution_error": null,
+    "actual_rows": [
+      [
+        "Alice"
+      ],
+      [
+        "David"
+      ]
+    ],
+    "expected_rows": [
+      [
+        "Alice"
+      ],
+      [
+        "David"
+      ]
+    ],
+    "result_match": true
+  }
+}

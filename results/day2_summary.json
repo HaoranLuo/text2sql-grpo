@@ -1,0 +1,41 @@
+{
+  "date": "2026-07-19",
+  "scope": "3B Reasoning Generator inference feasibility",
+  "model": "Qwen2.5-Coder-3B-Instruct",
+  "model_is_finetuned_for_text_to_sql": false,
+  "training_performed": false,
+  "gpu": "NVIDIA A40",
+  "gpu_memory_gib": 5.86,
+  "smoke_test": {
+    "execution_success": true,
+    "result_match": true,
+    "model_load_seconds": 15.41,
+    "generation_seconds": 11.18
+  },
+  "conditional_tests": {
+    "model": "Qwen2.5-Coder-3B-Instruct",
+    "prompt_version": "v2_minimum_tables",
+    "gpu": "NVIDIA A40",
+    "total_tests": 5,
+    "parse_success_count": 5,
+    "execution_success_count": 4,
+    "result_match_count": 3,
+    "parse_success_rate": 1.0,
+    "execution_success_rate": 0.8,
+    "result_match_rate": 0.6
+  },
+  "observed_bad_cases": [
+    {
+      "test": "T1_single_table_filter",
+      "type": "unnecessary_join",
+      "description": "The model used the scores table even though schema links only referenced students, causing duplicate rows."
+    },
+    {
+      "test": "T5_group_by_having",
+      "type": "alias_column_ownership_error",
+      "description": "The model generated s.score_id although alias s referred to students; SQLite reported no such column."
+    }
+  ],
+  "interpretation": "This is a small handcrafted feasibility test, not an official Spider or BIRD benchmark and not a training result.",
+  "next_step": "Add static schema-link validation and execution-error-driven SQL revision, then evaluate the revised workflow."
+}

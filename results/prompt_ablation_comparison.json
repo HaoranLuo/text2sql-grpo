@@ -1,0 +1,49 @@
+{
+  "v1_original_prompt": {
+    "sql": "SELECT DISTINCT s.name\nFROM students s\nJOIN scores sc ON s.student_id = sc.student_id\nWHERE s.age > 20 AND s.major = 'Computer Science'\nORDER BY s.name ASC;",
+    "parse_success": true,
+    "parse_method": "sql_code_block",
+    "generation_seconds": 12.97,
+    "evaluation": {
+      "execution_success": true,
+      "execution_error": null,
+      "actual_rows": [],
+      "expected_rows": [
+        [
+          "Alice"
+        ],
+        [
+          "David"
+        ]
+      ],
+      "result_match": false
+    }
+  },
+  "v2_minimum_tables_prompt": {
+    "sql": "SELECT name FROM students WHERE age > 20 AND major = 'Computer Science' ORDER BY name ASC;",
+    "parse_success": true,
+    "parse_method": "sql_code_block",
+    "generation_seconds": 14.09,
+    "evaluation": {
+      "execution_success": true,
+      "execution_error": null,
+      "actual_rows": [
+        [
+          "Alice"
+        ],
+        [
+          "David"
+        ]
+      ],
+      "expected_rows": [
+        [
+          "Alice"
+        ],
+        [
+          "David"
+        ]
+      ],
+      "result_match": true
+    }
+  }
+}

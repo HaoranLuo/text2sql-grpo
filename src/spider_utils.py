@@ -328,7 +328,14 @@ class DatabaseExecutor:
         try:
             conn.set_progress_handler(self._make_progress_handler(), PROGRESS_HANDLER_INTERVAL)
             start = time.perf_counter()
-            cursor = conn.execute(sql)
+            try:
+                cursor = conn.execute(sql)
+            except sqlite3.Warning:
+                # Multi-statement SQL: sqlite3 raises a Warning, not an Error.
+                # Treat as execution failure (counted, not fatal).
+                result["error"] = "SQL rejected: multi-statement input"
+                result["error_type"] = "multi_statement"
+                return result
 
             # Batch-read rows to cap memory — never keep more than limits
             _FETCH_BATCH = 1000
@@ -544,10 +551,17 @@ def compare_execution_results(
         only_pred = pc - gc
         only_gold = gc - pc
         detail: List[str] = []
+        # Safe sort key: rows may contain None (SQL NULL), which cannot be
+        # compared with int/str. Convert to a comparable sentinel first.
+        # count may also be None (execution failure) — map to -1.
+        def _safe_sort_key(item):
+            row, count = item
+            return (tuple(str(v) if v is None else v for v in row),
+                    count if count is not None else -1)
         if only_pred:
-            detail.append(f"rows only/more in predicted: {sorted(only_pred.items())[:5]}")
+            detail.append(f"rows only/more in predicted: {sorted(only_pred.items(), key=_safe_sort_key)[:5]}")
         if only_gold:
-            detail.append(f"rows only/more in gold: {sorted(only_gold.items())[:5]}")
+            detail.append(f"rows only/more in gold: {sorted(only_gold.items(), key=_safe_sort_key)[:5]}")
         return {**base, "match": False,
                 "match_reason": "Row mismatch (order ignored, duplicate counts preserved). " + "; ".join(detail),
                 "failure_stage": "row_value_set"}

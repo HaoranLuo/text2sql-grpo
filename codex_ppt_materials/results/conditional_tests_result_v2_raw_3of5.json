@@ -1,0 +1,194 @@
+{
+  "summary": {
+    "model": "Qwen2.5-Coder-3B-Instruct",
+    "prompt_version": "v2_minimum_tables",
+    "gpu": "NVIDIA A40",
+    "total_tests": 5,
+    "parse_success_count": 5,
+    "execution_success_count": 4,
+    "result_match_count": 3,
+    "parse_success_rate": 1.0,
+    "execution_success_rate": 0.8,
+    "result_match_rate": 0.6
+  },
+  "tests": [
+    {
+      "id": "T1_single_table_filter",
+      "category": "single_table_filter_order",
+      "question": "List the names of students who are older than 20 and major in Computer Science. Order the names alphabetically.",
+      "schema_links": [
+        "students.name",
+        "students.age",
+        "students.major"
+      ],
+      "raw_response": "Let's break down the task and generate the SQL query step-by-step:\n\n### Task Breakdown\n\n1. **Identify Required Tables and Columns:**\n   - We need to retrieve data from the `students` table to get the names of students.\n   - We also need data from the `scores` table to filter students based on their age and major.\n\n2. **Determine Joins:**\n   - Since we need to filter students based on their age and major, we need to join the `students` table with the `scores` table on the `student_id` column.\n\n3. **Formulate Filters:**\n   - We need to filter students who are older than 20.\n   - We also need to filter students who are majoring in Computer Science.\n\n4. **Grouping and Aggregation:**\n   - Since we are only interested in the names of students, we do not need to group or aggregate any data.\n\n5. **Ordering:**\n   - We need to order the names of students alphabetically.\n\n6. **Construct the SQL Query:**\n   - Start with the `SELECT` statement to specify the columns we want to retrieve (`name`).\n   - Use an `INNER JOIN` to combine rows from the `students` and `scores` tables based on the `student_id` column.\n   - Add `WHERE` clauses to filter students based on age and major.\n   - Use `ORDER BY` to sort the results alphabetically by name.\n\n### Final SQL Query\n\n```sql\nSELECT s.name\nFROM students s\nINNER JOIN scores sc ON s.student_id = sc.student_id\nWHERE s.age > 20 AND s.major = 'Computer Science'\nORDER BY s.name ASC;\n```\n\n### Explanation\n\n- **SELECT s.name**: We select the `name` column from the `students` table.\n- **FROM students s**: We specify the `students` table and alias it as `s`.\n- **INNER JOIN scores sc ON s.student_id = sc.student_id**: We join the `students` table with the `scores` table on the `student_id` column to link each student with their scores.\n- **WHERE s.age > 20 AND s.major = 'Computer Science'**: We apply the filters to only include students who are older than 20 and majoring in Computer Science.\n- **ORDER BY s.name ASC**: We order the results alphabetically by the `name` column in ascending order.",
+      "sql": "SELECT s.name\nFROM students s\nINNER JOIN scores sc ON s.student_id = sc.student_id\nWHERE s.age > 20 AND s.major = 'Computer Science'\nORDER BY s.name ASC;",
+      "parse_success": true,
+      "parse_method": "sql_code_block",
+      "generation_seconds": 13.87,
+      "evaluation": {
+        "execution_success": true,
+        "execution_error": null,
+        "actual_rows": [
+          [
+            "Alice"
+          ],
+          [
+            "Alice"
+          ],
+          [
+            "David"
+          ]
+        ],
+        "expected_rows": [
+          [
+            "Alice"
+          ],
+          [
+            "David"
+          ]
+        ],
+        "result_match": false
+      }
+    },
+    {
+      "id": "T2_required_join",
+      "category": "required_join_filter",
+      "question": "List the student name and course name for every score that is at least 90. Order the results by score from highest to lowest.",
+      "schema_links": [
+        "students.student_id",
+        "students.name",
+        "scores.student_id",
+        "scores.course",
+        "scores.score"
+      ],
+      "raw_response": "Let's break down the task and generate the SQL query step-by-step:\n\n### Task Breakdown\n\n1. **Identify Required Tables and Columns:**\n   - We need to list the student name and course name for scores that are at least 90.\n   - From the schema, we have:\n     - `students` table with columns: `student_id`, `name`, `age`, `major`\n     - `scores` table with columns: `score_id`, `student_id`, `course`, `score`\n\n2. **Determine Joins:**\n   - Since `scores` table contains `student_id` which is a foreign key referencing `students.student_id`, we need to join these two tables to get the student names along with their scores.\n\n3. **Formulate Filters:**\n   - We need to filter the scores to include only those where the score is at least 90.\n\n4. **Grouping and Aggregation:**\n   - In this case, we don't need to group or aggregate data since we are listing individual records.\n\n5. **Ordering:**\n   - We need to order the results by score in descending order to show the highest scores first.\n\n6. **Construct the SQL Query:**\n   - Start with the `SELECT` statement to specify the columns we want to retrieve: `students.name` and `scores.course`.\n   - Use an `INNER JOIN` to combine rows from `students` and `scores` based on the `student_id`.\n   - Apply a `WHERE` clause to filter scores greater than or equal to 90.\n   - Finally, use an `ORDER BY` clause to sort the results by score in descending order.\n\n### Final SQL Query\n\n```sql\nSELECT students.name, scores.course\nFROM students\nINNER JOIN scores ON students.student_id = scores.student_id\nWHERE scores.score >= 90\nORDER BY scores.score DESC;\n```\n\n### Explanation\n\n- **SELECT**: We select the `name` column from the `students` table and the `course` column from the `scores` table.\n- **FROM**: We start from the `students` table and alias it as `students`.\n- **INNER JOIN**: We join the `scores` table to the `students` table on the `student_id` column, which is common to both tables.\n- **WHERE**: We filter the joined records to include only those where the `score` is greater than or equal to 90.\n- **ORDER BY**:",
+      "sql": "SELECT students.name, scores.course\nFROM students\nINNER JOIN scores ON students.student_id = scores.student_id\nWHERE scores.score >= 90\nORDER BY scores.score DESC;",
+      "parse_success": true,
+      "parse_method": "sql_code_block",
+      "generation_seconds": 13.58,
+      "evaluation": {
+        "execution_success": true,
+        "execution_error": null,
+        "actual_rows": [
+          [
+            "Alice",
+            "Databases"
+          ],
+          [
+            "Bob",
+            "Databases"
+          ]
+        ],
+        "expected_rows": [
+          [
+            "Alice",
+            "Databases"
+          ],
+          [
+            "Bob",
+            "Databases"
+          ]
+        ],
+        "result_match": true
+      }
+    },
+    {
+      "id": "T3_aggregation",
+      "category": "join_group_by_average",
+      "question": "For each course, show the course name and its average score. Order the results by course name.",
+      "schema_links": [
+        "scores.course",
+        "scores.score"
+      ],
+      "raw_response": "Let's break down the task and generate the SQL query step-by-step:\n\n### Task Breakdown\n\n1. **Understand the Question**: We need to find the average score for each course and order the results by course name.\n2. **Identify Relevant Tables**: From the schema, we have two tables: `students` and `scores`.\n3. **Determine Required Columns**:\n   - `scores.course`: To identify the course for each score.\n   - `scores.score`: To calculate the average score for each course.\n4. **Join Condition**: Since `scores.student_id` is a foreign key referencing `students.student_id`, we can join these tables on this common column.\n5. **Grouping**: We need to group the results by `scores.course` to calculate the average score for each course.\n6. **Aggregation**: We will use the `AVG()` function to calculate the average score.\n7. **Ordering**: Finally, we will order the results by `scores.course`.\n\n### Step-by-Step Reasoning\n\n1. **Join the Tables**: We join the `scores` table with the `students` table on `student_id` to get the course name along with the scores.\n2. **Group By Course**: We group the results by `scores.course` to calculate the average score for each course.\n3. **Calculate Average Score**: We use the `AVG()` function on `scores.score` to compute the average score for each course.\n4. **Order By Course Name**: We order the results by `scores.course` to display the courses in alphabetical order.\n\n### Final SQL Query\n\n```sql\nSELECT \n    s.course, \n    AVG(s.score) AS average_score\nFROM \n    scores s\nJOIN \n    students st ON s.student_id = st.student_id\nGROUP BY \n    s.course\nORDER BY \n    s.course;\n```\n\n### Explanation\n\n- **SELECT Clause**: We select `s.course` to get the course name and `AVG(s.score) AS average_score` to calculate the average score for each course.\n- **FROM Clause**: We start from the `scores` table aliased as `s`.\n- **JOIN Clause**: We join the `students` table aliased as `st` on `s.student_id = st.student_id` to link each score with its corresponding student.\n- **GROUP BY Clause**: We group the results by `s.course` to ensure that the average score is calculated for each unique course.\n- **",
+      "sql": "SELECT \n    s.course, \n    AVG(s.score) AS average_score\nFROM \n    scores s\nJOIN \n    students st ON s.student_id = st.student_id\nGROUP BY \n    s.course\nORDER BY \n    s.course;",
+      "parse_success": true,
+      "parse_method": "sql_code_block",
+      "generation_seconds": 13.56,
+      "evaluation": {
+        "execution_success": true,
+        "execution_error": null,
+        "actual_rows": [
+          [
+            "AI",
+            79.0
+          ],
+          [
+            "Databases",
+            93.0
+          ]
+        ],
+        "expected_rows": [
+          [
+            "AI",
+            79.0
+          ],
+          [
+            "Databases",
+            93.0
+          ]
+        ],
+        "result_match": true
+      }
+    },
+    {
+      "id": "T4_not_exists",
+      "category": "not_exists_subquery",
+      "question": "List the names of students who have no records in the scores table. Order the names alphabetically.",
+      "schema_links": [
+        "students.student_id",
+        "students.name",
+        "scores.student_id"
+      ],
+      "raw_response": "Let's approach this step-by-step:\n\n### Step 1: Understand the Question\nThe task is to list the names of students who do not have any records in the `scores` table. We need to find students who are not present in the `scores` table based on their `student_id`.\n\n### Step 2: Identify Relevant Tables and Columns\n- **students**: Contains student information including `student_id`, `name`, `age`, and `major`.\n- **scores**: Contains student scores including `score_id`, `student_id`, `course`, and `score`.\n\n### Step 3: Determine the Required Join\nSince we need to compare students across both tables, we need to join the `students` table with the `scores` table on the `student_id` column.\n\n### Step 4: Formulate the Filter Condition\nWe need to filter out students who have records in the `scores` table. This can be done using a `NOT EXISTS` clause, which checks for the absence of a matching record in the `scores` table.\n\n### Step 5: Construct the SQL Query\nBased on the above steps, the SQL query can be constructed as follows:\n\n```sql\nSELECT s.name\nFROM students s\nWHERE NOT EXISTS (\n    SELECT 1\n    FROM scores sc\n    WHERE sc.student_id = s.student_id\n);\n```\n\n### Explanation\n- **SELECT s.name**: We select the `name` column from the `students` table.\n- **FROM students s**: We specify the `students` table and alias it as `s`.\n- **WHERE NOT EXISTS (...)**: This condition ensures that we only include students who do not have a corresponding entry in the `scores` table.\n  - **SELECT 1**: This subquery returns a single value (1) for each row in the `scores` table that matches the `student_id` in the `students` table.\n  - **FROM scores sc**: We specify the `scores` table and alias it as `sc`.\n  - **WHERE sc.student_id = s.student_id**: This condition checks if the `student_id` in the `scores` table matches the `student_id` in the `students` table.\n\n### Final SQL Query\n```sql\nSELECT s.name\nFROM students s\nWHERE NOT EXISTS (\n    SELECT 1\n    FROM scores sc\n    WHERE sc.student_id = s.student_id\n);\n```\n\nThis query efficiently lists the names of students who have no records in the `scores`",
+      "sql": "SELECT s.name\nFROM students s\nWHERE NOT EXISTS (\n    SELECT 1\n    FROM scores sc\n    WHERE sc.student_id = s.student_id\n);",
+      "parse_success": true,
+      "parse_method": "sql_code_block",
+      "generation_seconds": 13.54,
+      "evaluation": {
+        "execution_success": true,
+        "execution_error": null,
+        "actual_rows": [
+          [
+            "Carol"
+          ]
+        ],
+        "expected_rows": [
+          [
+            "Carol"
+          ]
+        ],
+        "result_match": true
+      }
+    },
+    {
+      "id": "T5_group_by_having",
+      "category": "join_group_by_having",
+      "question": "List the names of students who have more than one score record, together with the number of their score records. Order the results by student name.",
+      "schema_links": [
+        "students.student_id",
+        "students.name",
+        "scores.student_id",
+        "scores.score_id"
+      ],
+      "raw_response": "Let's break down the task and generate the SQL query step-by-step:\n\n### Task Breakdown\n\n1. **Understand the Question**: We need to list the names of students who have more than one score record and also include the number of their score records. The results should be ordered by student name.\n\n2. **Identify Relevant Tables and Columns**:\n   - `students`: Contains student information including `student_id`, `name`, and `age`.\n   - `scores`: Contains score information including `score_id`, `student_id`, `course`, and `score`.\n\n3. **Determine the Required Joins**:\n   - Since we need to link students with their scores, we need to join the `students` table with the `scores` table on the `student_id` column.\n\n4. **Formulate the Grouping and Aggregation**:\n   - We need to group the results by `student_id` to count the number of score records for each student.\n   - We will use the `COUNT(*)` function to count the number of score records for each student.\n\n5. **Apply Filters**:\n   - We need to filter the results to include only those students who have more than one score record. This can be achieved using the `HAVING` clause with a condition `COUNT(*) > 1`.\n\n6. **Order the Results**:\n   - Finally, we need to order the results by `name` to meet the requirement.\n\n### SQL Query Generation\n\nBased on the above steps, here is the SQL query:\n\n```sql\nSELECT s.name, COUNT(s.score_id) AS score_count\nFROM students s\nJOIN scores sc ON s.student_id = sc.student_id\nGROUP BY s.student_id\nHAVING COUNT(sc.score_id) > 1\nORDER BY s.name;\n```\n\n### Explanation\n\n- **SELECT s.name, COUNT(s.score_id) AS score_count**: This selects the student's name and counts the number of score records for each student.\n- **FROM students s JOIN scores sc ON s.student_id = sc.student_id**: This joins the `students` table with the `scores` table on the `student_id` column.\n- **GROUP BY s.student_id**: This groups the results by `student_id` to aggregate the score records for each student.\n- **HAVING COUNT(sc.score_id) > 1**: This filters the grouped results to include only those students who have more than one score record.\n- **ORDER BY s.name**: This orders the final",
+      "sql": "SELECT s.name, COUNT(s.score_id) AS score_count\nFROM students s\nJOIN scores sc ON s.student_id = sc.student_id\nGROUP BY s.student_id\nHAVING COUNT(sc.score_id) > 1\nORDER BY s.name;",
+      "parse_success": true,
+      "parse_method": "sql_code_block",
+      "generation_seconds": 13.55,
+      "evaluation": {
+        "execution_success": false,
+        "execution_error": "no such column: s.score_id",
+        "actual_rows": [],
+        "expected_rows": [
+          [
+            "Alice",
+            2
+          ]
+        ],
+        "result_match": false
+      }
+    }
+  ]
+}

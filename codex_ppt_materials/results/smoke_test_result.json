@@ -1,0 +1,31 @@
+{
+  "model": "Qwen2.5-Coder-3B-Instruct",
+  "model_path": "/gpfs/work/aac/jiahuiwang24/reasoning_generator_3b/models/Qwen2.5-Coder-3B-Instruct",
+  "question": "List the names of students who are older than 20 and major in Computer Science. Order the names alphabetically.",
+  "ddl_schema": "CREATE TABLE students (\n    student_id INTEGER PRIMARY KEY,\n    name TEXT,\n    age INTEGER,\n    major TEXT\n);\n\nCREATE TABLE scores (\n    score_id INTEGER PRIMARY KEY,\n    student_id INTEGER,\n    course TEXT,\n    score REAL,\n    FOREIGN KEY (student_id) REFERENCES students(student_id)\n);",
+  "raw_response": "Let's break down the task and generate the SQL query step-by-step:\n\n1. **Understand the Task**: We need to list the names of students who are older than 20 and major in Computer Science. The results should be ordered alphabetically by their names.\n\n2. **Identify Required Tables and Columns**:\n   - `students` table: Contains columns `student_id`, `name`, `age`, and `major`.\n   - `scores` table: Contains columns `score_id`, `student_id`, `course`, and `score`. However, this table is not directly relevant to our query since we only need information from the `students` table.\n\n3. **Formulate the Query**:\n   - **SELECT Clause**: We need to select the `name` column from the `students` table.\n   - **FROM Clause**: The data comes from the `students` table.\n   - **WHERE Clause**: We need to filter the students based on two conditions:\n     - `age > 20`: Students must be older than 20.\n     - `major = 'Computer Science'`: Students must major in Computer Science.\n   - **ORDER BY Clause**: The results should be ordered alphabetically by the `name` column.\n\n4. **Construct the SQL Query**:\n   - Combine the above elements into a single SQL query.\n\nAccordingly, the generated SQL query is:\n\n```sql\nSELECT name FROM students WHERE age > 20 AND major = 'Computer Science' ORDER BY name ASC;\n```",
+  "extracted_sql": "SELECT name FROM students WHERE age > 20 AND major = 'Computer Science' ORDER BY name ASC;",
+  "model_load_seconds": 15.41,
+  "generation_seconds": 11.18,
+  "gpu": "NVIDIA A40",
+  "gpu_memory_gib": 5.86,
+  "execution_success": true,
+  "execution_error": null,
+  "actual_rows": [
+    [
+      "Alice"
+    ],
+    [
+      "David"
+    ]
+  ],
+  "expected_rows": [
+    [
+      "Alice"
+    ],
+    [
+      "David"
+    ]
+  ],
+  "result_match": true
+}

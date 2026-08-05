@@ -1,0 +1,12 @@
+{
+  "model": "Qwen2.5-Coder-3B-Instruct",
+  "prompt_version": "v2_minimum_tables",
+  "gpu": "NVIDIA A40",
+  "total_tests": 5,
+  "parse_success_count": 5,
+  "execution_success_count": 4,
+  "result_match_count": 3,
+  "parse_success_rate": 1.0,
+  "execution_success_rate": 0.8,
+  "result_match_rate": 0.6
+}
