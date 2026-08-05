@@ -34,6 +34,12 @@ KNOWN_EXPERIMENTS = {
     "eval_omnisql": {"model": "OmniSQL-7B", "method": "零样本", "family": "外部"},
     "eval_dsv2_100": {"model": "DeepSeek-V2-Lite", "method": "零样本", "family": "外部"},
     "eval_api_ceiling": {"model": "DeepSeek-V4-Flash-API", "method": "API基准", "family": "外部"},
+    "p2a_100": {"model": "Qwen2.5-Coder-3B", "method": "GRPO 100条G8三级", "family": "3B"},
+    "p2a_500": {"model": "Qwen2.5-Coder-3B", "method": "GRPO 500条G8三级", "family": "3B"},
+    "p2a_2000": {"model": "Qwen2.5-Coder-3B", "method": "GRPO 2000条G8三级", "family": "3B"},
+    "p2a_7000": {"model": "Qwen2.5-Coder-3B", "method": "GRPO 7000条G8三级", "family": "3B"},
+    "p2c2_partial": {"model": "Qwen2.5-Coder-3B", "method": "GRPO 100条G8partial", "family": "3B"},
+    "c3_atomic": {"model": "Qwen2.5-Coder-3B", "method": "GRPO 100条G4原子奖励", "family": "3B"},
 }
 
 

@@ -10,3 +10,5 @@
 {"timestamp": "2026-08-05T16:28:36.945344", "name": "eval_api_ceiling", "model": "DeepSeek-V4-Flash-API", "method": "API基准", "family": "外部", "match_rate": 0.76, "parse_rate": null, "exec_rate": null, "elapsed_seconds": 228.1, "notes": ""}
 {"timestamp": "2026-08-05T16:28:37.205337", "name": "eval_dsv2_100", "model": "DeepSeek-V2-Lite", "method": "DeepSeekV2零样本", "family": "外部", "match_rate": 0.78, "parse_rate": 1.0, "exec_rate": 0.98, "elapsed_seconds": 1252.45, "notes": ""}
 {"timestamp": "2026-08-05T16:28:38.278873", "name": "x", "model": "?", "method": "", "family": "?", "match_rate": 0.45, "parse_rate": 0.97, "exec_rate": 0.8, "elapsed_seconds": 186.83, "notes": ""}
+{"timestamp": "2026-08-05T17:07:32.469200", "name": "p2a_100", "model": "Qwen2.5-Coder-3B", "method": "GRPO 100条 G8 三级", "family": "3B", "match_rate": 0.47, "parse_rate": 0.97, "exec_rate": 0.83, "elapsed_seconds": 373.64, "notes": ""}
+{"timestamp": "2026-08-05T17:07:33.537574", "name": "p2c2_partial", "model": "Qwen2.5-Coder-3B", "method": "GRPO 100条 G8 partial", "family": "3B", "match_rate": 0.46, "parse_rate": 0.96, "exec_rate": 0.76, "elapsed_seconds": 352.43, "notes": ""}
