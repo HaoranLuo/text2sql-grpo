@@ -27,7 +27,7 @@ SPIDER = str(PROJECT / 'data' / 'spider_data')
 
 
 def build_prompt_variants(question: str, ddl: str) -> list:
-    """5 种 prompt 视角"""
+    """5/7 种 prompt 视角（p1-p5 为原始 5 视角；p6/p7 用于 7p 验证）"""
     p1 = ReasoningGeneratorAgent.build_prompt(question=question, ddl_schema=ddl, dialect='sqlite')
     schema_lines = []
     current = None
@@ -67,7 +67,21 @@ IMPORTANT: Use the MINIMUM number of tables. If one table suffices, do NOT join 
 Question: {question}
 
 Write the SQL query. Only output SQL, nothing else."""
-    return [p1, p2, p3, p4, p5]
+    # p6/p7: 7p 验证用（第 6、7 视角）
+    p6 = f"""Database schema:
+{ddl}
+
+Question: {question}
+
+Step by step: 1) which tables and columns are needed; 2) what filters/joins;
+3) the SQLite SQL. Output the final SQL in a ```sql block."""
+    p7 = f"""Database schema:
+{ddl}
+
+Question: {question}
+
+Write the SQL as a SINGLE line without any comments or explanation."""
+    return [p1, p2, p3, p4, p5, p6, p7]
 
 
 def main():
@@ -76,12 +90,15 @@ def main():
     parser.add_argument('--output-dir', required=True, help='输出目录')
     parser.add_argument('--limit', type=int, default=100)
     parser.add_argument('--max-new-tokens', type=int, default=256)
+    parser.add_argument('--n-prompts', type=int, default=5, choices=[5, 7],
+                        help='投票用多少个 prompt 视角 (5 或 7)')
     args = parser.parse_args()
 
     lora = args.lora_path
     out_dir = Path(args.output_dir)
     limit = args.limit
-    print(f"5prompt投票 | LoRA: {lora} | {limit} 条")
+    n_prompts = args.n_prompts
+    print(f"{n_prompts}prompt投票 | LoRA: {lora} | {limit} 条")
 
     from peft import PeftModel
     tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL, local_files_only=True, trust_remote_code=True)
@@ -105,7 +122,7 @@ def main():
     for i, item in enumerate(items):
         db_id, question, gold_sql = item['db_id'], item['question'], item['query']
         ddl, _ = loader.get_ddl_with_source(db_id)
-        prompts = build_prompt_variants(question, ddl)
+        prompts = build_prompt_variants(question, ddl)[:n_prompts]
 
         exec_results = []   # (full_rows_tuple, truncated_flag)
         for p in prompts:
