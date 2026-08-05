@@ -17,3 +17,4 @@
 {"timestamp": "2026-08-05T21:53:50.871297", "name": "p2a_2000", "model": "Qwen2.5-Coder-3B", "method": "GRPO 2000条G8三级", "family": "3B", "match_rate": 0.43, "parse_rate": 0.96, "exec_rate": 0.79, "elapsed_seconds": 364.57, "notes": ""}
 {"timestamp": "2026-08-05T21:53:51.942108", "name": "p2a_7000", "model": "Qwen2.5-Coder-3B", "method": "GRPO 7000条G8三级", "family": "3B", "match_rate": 0.45, "parse_rate": 0.97, "exec_rate": 0.83, "elapsed_seconds": 362.99, "notes": ""}
 {"timestamp": "2026-08-05T21:54:31.767073", "name": "x", "model": "?", "method": "", "family": "?", "match_rate": 0.47, "parse_rate": 0.97, "exec_rate": 0.83, "elapsed_seconds": 373.64, "notes": ""}
+{"timestamp": "2026-08-05T23:00:42.184305", "name": "eval_5prompt_3b_trained", "model": "Qwen2.5-Coder-3B", "method": "训练后3B 5prompt投票", "family": "3B", "match_rate": 0.7, "parse_rate": null, "exec_rate": null, "elapsed_seconds": 2189.0, "notes": "修复后代码 | 3prompt投票65%->70%"}

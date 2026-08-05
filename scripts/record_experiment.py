@@ -40,6 +40,7 @@ KNOWN_EXPERIMENTS = {
     "p2a_7000": {"model": "Qwen2.5-Coder-3B", "method": "GRPO 7000条G8三级", "family": "3B"},
     "p2c2_partial": {"model": "Qwen2.5-Coder-3B", "method": "GRPO 100条G8partial", "family": "3B"},
     "c3_atomic": {"model": "Qwen2.5-Coder-3B", "method": "GRPO 100条G4原子奖励", "family": "3B"},
+    "eval_5prompt_3b_trained": {"model": "Qwen2.5-Coder-3B", "method": "训练后3B 5prompt投票", "family": "3B"},
 }
 
 
@@ -82,6 +83,14 @@ def generate_charts():
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     import numpy as np
+    # 中文字体支持（Windows: SimHei/Microsoft YaHei; Linux: Noto/WQY）
+    for _f in ["Microsoft YaHei", "SimHei", "Noto Sans CJK SC", "WenQuanYi Zen Hei"]:
+        try:
+            plt.rcParams["font.sans-serif"] = [_f]
+            plt.rcParams["axes.unicode_minus"] = False
+            break
+        except Exception:
+            continue
 
     records = []
     with open(RECORDS_FILE, encoding="utf-8") as f:
