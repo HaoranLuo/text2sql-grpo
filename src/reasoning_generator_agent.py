@@ -227,7 +227,8 @@ Instructions:
         )
         if plain_match:
             tail = response[plain_match.start():]
-            split_at = _find_top_level_semicolon(tail)
+            # 通过类引用（_find_top_level_semicolon 是 staticmethod，模块级不可见）
+            split_at = ReasoningGeneratorAgent._find_top_level_semicolon(tail)
             end = split_at if split_at is not None else len(tail)
             sql = tail[:end].strip()
             if sql:
