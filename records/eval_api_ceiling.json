@@ -1,0 +1,7 @@
+{
+  "method": "deepseek_api_ceiling",
+  "match_count": 76,
+  "match_rate": 0.76,
+  "elapsed_seconds": 228.1,
+  "model": "deepseek-v4-flash"
+}

@@ -1,0 +1,7 @@
+{
+  "method": "m5_7b_trained_vote",
+  "match_count": 84,
+  "match_rate": 0.84,
+  "elapsed_seconds": 1508.1,
+  "lora": "/gpfs/work/aac/jiahuiwang24/reasoning_generator_3b/checkpoints/grpo_ea_g8"
+}

@@ -1,0 +1,123 @@
+{
+  "experiments": [
+    {
+      "label": "3B零样本基线",
+      "folder": "baseline_pretrain_100",
+      "match": 0.37,
+      "parse": 0.98,
+      "exec": 0.59
+    },
+    {
+      "label": "3B GRPO ckpt25(旧配置)",
+      "folder": "grpo_3b_checkpoint-25",
+      "match": 0.35,
+      "parse": 0.97,
+      "exec": 0.56
+    },
+    {
+      "label": "3B GRPO ckpt75(旧配置)",
+      "folder": "grpo_3b_checkpoint-75",
+      "match": 0.39,
+      "parse": 0.98,
+      "exec": 0.62
+    },
+    {
+      "label": "7B零样本基线",
+      "folder": "baseline_7b_100",
+      "match": 0.81,
+      "parse": 1.0,
+      "exec": 0.97
+    },
+    {
+      "label": "7B GRPO binary25(旧)",
+      "folder": "grpo_7b_binary_25",
+      "match": 0.79,
+      "parse": 1.0,
+      "exec": 0.96
+    },
+    {
+      "label": "7B GRPO 3lvl50(旧)",
+      "folder": "grpo_7b_threelevel_50",
+      "match": 0.79,
+      "parse": 1.0,
+      "exec": 0.96
+    },
+    {
+      "label": "7B GRPO partial(旧)",
+      "folder": "grpo_7b_partial_50",
+      "match": 0.78,
+      "parse": 1.0,
+      "exec": 0.96
+    },
+    {
+      "label": "7B GRPO 500d(旧)",
+      "folder": "grpo_7b_500d",
+      "match": 0.76,
+      "parse": 1.0,
+      "exec": 0.95
+    },
+    {
+      "label": "14B GRPO(旧)",
+      "folder": "grpo_14b_100",
+      "match": 0.76,
+      "parse": 1.0,
+      "exec": 1.0
+    },
+    {
+      "label": "3B GRPO G4修复版",
+      "folder": "grpo_3b_fixed",
+      "match": 0.35,
+      "parse": 0.96,
+      "exec": 0.56
+    },
+    {
+      "label": "7B GRPO E-A G8",
+      "folder": "grpo_ea_g8",
+      "match": 0.77,
+      "parse": 1.0,
+      "exec": 0.97
+    },
+    {
+      "label": "CSC-SQL-7B",
+      "folder": "eval_csc_100",
+      "match": 0.73,
+      "parse": 0.99,
+      "exec": 0.99
+    },
+    {
+      "label": "OmniSQL-7B",
+      "folder": "eval_OmniSQL",
+      "match": 0.66,
+      "parse": 1.0,
+      "exec": 0.98
+    },
+    {
+      "label": "DeepSeekV2-Lite",
+      "folder": "eval_dsv2_100",
+      "match": 0.78,
+      "parse": 1.0,
+      "exec": 0.98
+    },
+    {
+      "label": "Qwen14B零样本",
+      "folder": "eval_qwen14_100",
+      "match": 0.78,
+      "parse": 1.0,
+      "exec": 1.0
+    },
+    {
+      "label": "DeepSeekAPI",
+      "folder": "eval_api_ceiling",
+      "match": null,
+      "parse": null,
+      "exec": null
+    },
+    {
+      "label": "7B SFT(API数据)",
+      "folder": "eval_sft_100",
+      "match": 0.71,
+      "parse": 1.0,
+      "exec": 0.87
+    }
+  ]
+}

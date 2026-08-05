@@ -1,0 +1,36 @@
+# 模型文件（太大，不提交）
+models/
+cache/
+envs/
+
+# 数据（可从官方重新下载）
+data/
+
+# 训练输出（checkpoint 太大）
+checkpoints/
+outputs/
+logs/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# 临时文件
+tmp/
+*.tmp
+*.save
+
+# IDE
+.vscode/
+.idea/
+
+# 密钥（绝不上传）
+*.key
+*.env
+run_api_gen.sh
+s1.sh
+
+# HPC 脚本内嵌密钥的变体
+scripts/run_api_gen.sh
+scripts/s1.sh

@@ -1,0 +1,12 @@
+{
+  "question": "List the names of students who are older than 20 and major in Computer Science. Order the names alphabetically.",
+  "ddl_schema": "CREATE TABLE students (student_id INTEGER PRIMARY KEY, name TEXT, age INTEGER, major TEXT); CREATE TABLE scores (score_id INTEGER PRIMARY KEY, student_id INTEGER, course TEXT, score REAL, FOREIGN KEY (student_id) REFERENCES students(student_id));",
+  "schema_links": [
+    "students.name",
+    "students.age",
+    "students.major"
+  ],
+  "evidence": null,
+  "dialect": "sqlite",
+  "candidate_count": 1
+}
