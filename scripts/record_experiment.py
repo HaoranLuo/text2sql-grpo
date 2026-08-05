@@ -55,10 +55,14 @@ def record(summary_path: str, name: str, method: str = "", notes: str = ""):
         "model": meta.get("model", "?"),
         "method": method or meta.get("method", "?"),
         "family": meta.get("family", "?"),
-        "match_rate": s.get("custom_execution_match_rate") or s.get("match_rate"),
+        "match_rate": (s.get("custom_execution_match_rate")
+                       if s.get("custom_execution_match_rate") is not None
+                       else s.get("match_rate")),
         "parse_rate": s.get("parse_success_rate"),
         "exec_rate": s.get("prediction_execution_success_rate"),
-        "elapsed_seconds": s.get("elapsed_seconds") or s.get("total_wall_seconds"),
+        "elapsed_seconds": (s.get("elapsed_seconds")
+                            if s.get("elapsed_seconds") is not None
+                            else s.get("total_wall_seconds")),
         "notes": notes,
     }
 

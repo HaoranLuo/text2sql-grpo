@@ -282,7 +282,10 @@ class DatabaseExecutor:
         upper = stripped[:50].upper().lstrip()
         if not any(upper.startswith(p) for p in cls._ALLOWED_PREFIXES):
             return False
-        if cls._DANGEROUS_KEYWORDS.search(stripped):
+        # Strip string literals before keyword scan so values like
+        # note='DELETE' do not cause a false safety rejection.
+        without_strings = re.sub(r"'[^']*'", "", stripped)
+        if cls._DANGEROUS_KEYWORDS.search(without_strings):
             return False
         return True
 
@@ -522,6 +525,15 @@ def compare_execution_results(
                 "match_reason": f"Row count mismatch: predicted={pred_count}, gold={gold_count}",
                 "failure_stage": "row_count"}
     if pred_count == 0:
+        # Both empty — still verify column COUNT matches. A query selecting
+        # wrong columns that returns no rows would otherwise be a false
+        # positive (e.g. SELECT a,b vs SELECT a on an empty filter).
+        pred_cols = len(predicted_rows[0]) if predicted_rows else 0
+        gold_cols = len(gold_rows[0]) if gold_rows else 0
+        if pred_cols != gold_cols:
+            return {**base, "match": False,
+                    "match_reason": f"Both empty but column count differs: predicted={pred_cols}, gold={gold_cols}",
+                    "failure_stage": "column_count"}
         return {**base, "match": True, "match_reason": "Both results are empty", "failure_stage": None}
     if predicted_rows and gold_rows:
         pred_cols = len(predicted_rows[0])
@@ -551,12 +563,13 @@ def compare_execution_results(
         only_pred = pc - gc
         only_gold = gc - pc
         detail: List[str] = []
-        # Safe sort key: rows may contain None (SQL NULL), which cannot be
-        # compared with int/str. Convert to a comparable sentinel first.
-        # count may also be None (execution failure) — map to -1.
+        # Safe sort key: rows may contain None (SQL NULL) mixed with
+        # int/str/float — direct comparison raises TypeError across types.
+        # Convert EVERY cell to a canonical string form, and map count=None
+        # (execution failure) to -1, so sorting is always type-homogeneous.
         def _safe_sort_key(item):
             row, count = item
-            return (tuple(str(v) if v is None else v for v in row),
+            return (tuple(repr(v) for v in row),
                     count if count is not None else -1)
         if only_pred:
             detail.append(f"rows only/more in predicted: {sorted(only_pred.items(), key=_safe_sort_key)[:5]}")

@@ -127,9 +127,15 @@ def _evaluate_one(
     vc = validate_agent_candidate(gen_result)
     result["raw_model_response"] = vc["raw_response"]
     result["predicted_sql"] = vc["sql"]
-    # Take only the first statement (model sometimes outputs multiple SQL)
+    # Take only the first statement (model sometimes outputs multiple SQL).
+    # Quote-aware: ';' inside string literals must survive.
     if result["predicted_sql"]:
-        result["predicted_sql"] = result["predicted_sql"].split(";")[0].strip() + ";"
+        from reasoning_generator_agent import ReasoningGeneratorAgent
+        split_at = ReasoningGeneratorAgent._find_top_level_semicolon(result["predicted_sql"])
+        if split_at is not None:
+            result["predicted_sql"] = result["predicted_sql"][:split_at].strip() + ";"
+        elif not result["predicted_sql"].endswith(";"):
+            result["predicted_sql"] = result["predicted_sql"].strip() + ";"
     result["parse_success"] = vc["parse_success"]
     result["parse_method"] = vc["parse_method"]
     result["generation_seconds"] = round(vc["generation_seconds"], 4)

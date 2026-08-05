@@ -36,8 +36,15 @@ from spider_utils import (
 from spider_utils import _has_order_by, _normalize_value_for_comparison, _rows_to_counter
 
 # Atomic reward (FINER-SQL): dense structural credit via SQL parse Jaccard.
-from atomic_reward import AtomicOpsReward
-_atomic_reward = AtomicOpsReward(dialect="sqlite")
+# Lazy-imported so sqlglot is NOT a hard dependency for non-atomic rewards.
+_atomic_reward = None
+
+def _get_atomic_reward():
+    global _atomic_reward
+    if _atomic_reward is None:
+        from atomic_reward import AtomicOpsReward
+        _atomic_reward = AtomicOpsReward(dialect="sqlite")
+    return _atomic_reward
 
 # Import agent's build_prompt and extract_sql for guaranteed consistency.
 # Both are @staticmethod — no GPU needed.
@@ -78,9 +85,14 @@ def extract_sql(text: str) -> str:
 
     parsed = ReasoningGeneratorAgent.extract_sql(text)
     sql = parsed["sql"] if parsed["parse_success"] else ""
-    # Take only the first statement (Model sometimes generates multiple)
+    # Take only the first statement (Model sometimes generates multiple).
+    # Use the quote-aware splitter so ';' inside string literals survives.
     if sql:
-        sql = sql.split(";")[0].strip() + ";"
+        split_at = ReasoningGeneratorAgent._find_top_level_semicolon(sql)
+        if split_at is not None:
+            sql = sql[:split_at].strip() + ";"
+        elif not sql.endswith(";"):
+            sql = sql.strip() + ";"
     return sql
 
 
@@ -226,6 +238,16 @@ def _references_schema_table(
             pass
         gold_tables = ddl_tables
 
+    # CTE gold (WITH x AS ...) — regex FROM only sees the CTE alias 'x',
+    # so the intersection check would wrongly reject. In that case, fall
+    # back to the DB schema (already computed above when gold_tables empty)
+    # and only block obvious stubs.
+    if _re.search(r"\bWITH\b", gold_sql, _re.IGNORECASE):
+        pred_tables = set(_re.findall(r"\bFROM\s+([a-zA-Z_]\w*)", sql, _re.IGNORECASE))
+        pred_tables |= set(_re.findall(r"\bJOIN\s+([a-zA-Z_]\w*)", sql, _re.IGNORECASE))
+        # Reject only if the prediction references nothing at all (stub)
+        return len(pred_tables) > 0
+
     pred_tables = set(_re.findall(r"\bFROM\s+([a-zA-Z_]\w*)", sql, _re.IGNORECASE))
     pred_tables |= set(_re.findall(r"\bJOIN\s+([a-zA-Z_]\w*)", sql, _re.IGNORECASE))
 
@@ -275,8 +297,15 @@ def create_reward_function(spider_dir: str, reward_type: str = "three_level"):
             gold_outcome = executor.execute(db, gold_sql)
 
             if pred_outcome["success"] and gold_outcome["success"]:
-                pred_rows = pred_outcome["saved_rows"]
-                gold_rows = gold_outcome["saved_rows"]
+                # Use full_rows (NOT saved_rows) to match the evaluation
+                # protocol exactly — saved_rows caps at 1000 and would
+                # silently diverge from eval for >1000-row results.
+                # Guard truncation like _evaluate_one does.
+                if pred_outcome["full_rows_truncated"] or gold_outcome["full_rows_truncated"]:
+                    rewards.append(0.0)
+                    continue
+                pred_rows = pred_outcome["full_rows"]
+                gold_rows = gold_outcome["full_rows"]
 
                 # CRITICAL: use the SAME comparison logic as evaluation
                 # (compare_execution_results is ORDER BY-aware and
@@ -305,7 +334,7 @@ def create_reward_function(spider_dir: str, reward_type: str = "three_level"):
                 elif reward_type == "atomic":
                     # FINER-SQL atomic reward: Jaccard of parsed SQL structure
                     # (dense credit for "partially correct" SQL)
-                    atomic_score = _atomic_reward.score_against_list(
+                    atomic_score = _get_atomic_reward().score_against_list(
                         sql, [gold_sql],
                     )
                     # Combine: 0.3 executability + 0.7 atomic (dense signal)
@@ -452,7 +481,10 @@ def main() -> None:
     grpo_config = GRPOConfig(
         output_dir=output_dir,
         num_train_epochs=1,
-        per_device_train_batch_size=args.num_generations,
+        # 4x num_generations so each step processes 4 distinct prompts;
+        # batch_size=num_generations would process only 1 prompt/step and
+        # leave most of the dataset unseen within max_steps.
+        per_device_train_batch_size=args.num_generations * 4,
         gradient_accumulation_steps=1,
         learning_rate=args.learning_rate,
         logging_steps=5,

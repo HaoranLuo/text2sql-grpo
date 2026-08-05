@@ -173,6 +173,19 @@ Instructions:
 """.strip()
 
     @staticmethod
+    def _find_top_level_semicolon(text: str) -> Optional[int]:
+        """Return index of the first ';' that is NOT inside a string literal."""
+        in_single = in_double = False
+        for i, ch in enumerate(text):
+            if ch == "'" and not in_double:
+                in_single = not in_single
+            elif ch == '"' and not in_single:
+                in_double = not in_double
+            elif ch == ";" and not in_single and not in_double:
+                return i
+        return None
+
+    @staticmethod
     def extract_sql(response: str) -> Dict[str, Any]:
         # Strip SQL comment lines (-- ...) BEFORE extraction. Newer transformers
         # (>=4.51) make Qwen emit explanatory comments before the SELECT, which
@@ -207,8 +220,26 @@ Instructions:
                 "parse_method": "generic_code_block",
             }
 
+        # Plain SELECT/WITH … ; — split on a QUOTE-AWARE top-level ';'
+        # (string literals like 'a;b' must not terminate the statement).
         plain_match = re.search(
-            r"\b(SELECT|WITH)\b.*?;",
+            r"\b(SELECT|WITH)\b", response, flags=re.IGNORECASE
+        )
+        if plain_match:
+            tail = response[plain_match.start():]
+            split_at = _find_top_level_semicolon(tail)
+            end = split_at if split_at is not None else len(tail)
+            sql = tail[:end].strip()
+            if sql:
+                return {
+                    "sql": sql,
+                    "parse_success": True,
+                    "parse_method": "plain_sql",
+                }
+
+        # Fallback (no ';' at all): take up to end of text
+        plain_match = re.search(
+            r"\b(SELECT|WITH)\b.*",
             response,
             flags=re.IGNORECASE | re.DOTALL,
         )
@@ -261,9 +292,13 @@ Instructions:
             add_generation_prompt=True,
         )
 
+        # Truncate to 1536 like generate_batch, so single-path inference
+        # sees the SAME schema window as batch/training paths.
         inputs = self.tokenizer(
             chat_text,
             return_tensors="pt",
+            truncation=True,
+            max_length=1536,
         ).to("cuda:0")
 
         generation_start = time.time()

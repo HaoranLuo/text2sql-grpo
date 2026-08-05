@@ -159,8 +159,8 @@ else:
     sys.exit(1)
 " 2>/dev/null
 if [ $? -ne 0 ]; then
-    # 重新检查：上面的 exit 1 在管道里可能丢失，单独再判断
-    :
+    ERRORS=$((ERRORS+1))
+    echo "  [❌] 奖励区分度检查失败"
 fi
 
 # ------------------------------------------------------------
@@ -182,6 +182,10 @@ else:
     print('  [❌] 数据泄漏! ' + str(len(overlap)) + ' 条重叠')
     sys.exit(1)
 " 2>/dev/null
+if [ $? -ne 0 ]; then
+    ERRORS=$((ERRORS+1))
+    echo "  [❌] 数据泄漏检查失败"
+fi
 
 # ------------------------------------------------------------
 echo "[13/16] gold SQL 可执行性"
@@ -205,6 +209,10 @@ else:
     print('  [❌] ' + str(fail) + ' 条 gold 不可执行')
     sys.exit(1)
 " 2>/dev/null
+if [ $? -ne 0 ]; then
+    ERRORS=$((ERRORS+1))
+    echo "  [❌] gold SQL 可执行性检查失败"
+fi
 
 # ------------------------------------------------------------
 echo "[14/16] checkpoint 冲突检查 (防重复跑)"
@@ -230,6 +238,10 @@ else:
     print('  [❌] TRL API 变动, 缺失: ' + str(missing))
     sys.exit(1)
 " 2>/dev/null
+if [ $? -ne 0 ]; then
+    ERRORS=$((ERRORS+1))
+    echo "  [❌] TRL API 签名检查失败"
+fi
 
 # ------------------------------------------------------------
 echo "[16/16] GPU 显存预估"
