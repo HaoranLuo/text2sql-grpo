@@ -488,13 +488,12 @@ def main() -> None:
     if args.lora_init:
         print(f"Loading existing LoRA (SFT cold-start): {args.lora_init}")
         from peft import PeftModel
-        model = PeftModel.from_pretrained(model, args.lora_init, is_trainable=True)
-        # TRL 对传入的 PeftModel 不再重复包装；需显式确保 adapter 可训练
-        # （否则 GRPO 报 "element 0 of tensors does not require grad"）
-        model.train()
-        for name, param in model.named_parameters():
-            if "lora_" in name:
-                param.requires_grad = True
+        # 方案：merge_and_unload 把 SFT 适配器并入基座权重 → 得到"SFT 稠密起点"
+        # 之后走标准路径（新 LoraConfig + GRPOTrainer peft_config）。
+        # 直接传 PeftModel 给 GRPOTrainer 会走 TRL 特殊路径（实测 requires_grad 报错）。
+        tmp = PeftModel.from_pretrained(model, args.lora_init)
+        model = tmp.merge_and_unload()
+        print("SFT adapter merged into base weights (cold-start 起点)")
     model.gradient_checkpointing_enable()
 
     tokenizer = AutoTokenizer.from_pretrained(
@@ -517,24 +516,20 @@ def main() -> None:
     # ------------------------------------------------------------------
     # 3. LoRA configuration
     # ------------------------------------------------------------------
-    # 已有 LoRA（lora-init）时不再新建 peft_config（TRL 不重复包装）
-    lora_config = None
-    if not args.lora_init:
-        lora_config = LoraConfig(
-            r=16,
-            lora_alpha=32,
-            target_modules=[
-                "q_proj", "k_proj", "v_proj", "o_proj",
-                "gate_proj", "up_proj", "down_proj",
-            ],
-            lora_dropout=0.05,
-            bias="none",
-            task_type="CAUSAL_LM",
-        )
-    print(f"\nLoRA: {lora_config if lora_config else '(继承自 --lora-init 的适配器)'}")
-    if lora_config:
-        print(f"r={lora_config.r}, alpha={lora_config.lora_alpha}")
-        print(f"Target modules: {lora_config.target_modules}")
+    # 新 LoRA（lora-init 时起点 = 已 merge SFT 权重的稠密模型，照常新建）
+    lora_config = LoraConfig(
+        r=16,
+        lora_alpha=32,
+        target_modules=[
+            "q_proj", "k_proj", "v_proj", "o_proj",
+            "gate_proj", "up_proj", "down_proj",
+        ],
+        lora_dropout=0.05,
+        bias="none",
+        task_type="CAUSAL_LM",
+    )
+    print(f"\nLoRA: r={lora_config.r}, alpha={lora_config.lora_alpha}")
+    print(f"Target modules: {lora_config.target_modules}")
 
     # ------------------------------------------------------------------
     # 4. GRPO configuration
@@ -593,7 +588,7 @@ def main() -> None:
         args=grpo_config,
         train_dataset=dataset,
         processing_class=tokenizer,
-        peft_config=lora_config,  # None → 使用 --lora-init 传入的适配器继续训练
+        peft_config=lora_config,
     )
 
     print("\n" + "=" * 60)
