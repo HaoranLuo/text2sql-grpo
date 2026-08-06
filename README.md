@@ -99,3 +99,8 @@ python scripts/record_experiment.py --summary outputs/xxx/summary.json \
 - [EXPERIMENT_MATRIX.md](EXPERIMENT_MATRIX.md) — 30+ 实验对比总表
 - [HANDOFF.md](HANDOFF.md) — 会话交接 + 自动监控重建方法
 - [GRPO_CHECKLIST.md](GRPO_CHECKLIST.md) — 训练前检查清单
+- [archive/](archive/) — 早期过程性文档（数字已过时，仅供历史参考）
+
+## 📜 许可
+
+MIT License（学习与学术使用自由）
