@@ -73,6 +73,8 @@ FINAL_REPORT.md / EXPERIMENT_MATRIX.md / PHASE2_PLAN.md
 6. GitHub 推送（网络不稳，手动推）
 
 > 自动监控：Claude 会话内 cron（15,45 * * * *）每 30 分钟检查作业+记录+推送，会话结束即失效，需重新建立。
+>
+> **如何重建监控**：新会话说"建立自动监控"即可。Claude 会调用 CronCreate 用 `15,45 * * * *` 重建，监控指令=查 squeue→tail 日志→找新 summary→记录→更新报告→git push→崩溃修复重提。
 
 ## 七、GitHub
 
