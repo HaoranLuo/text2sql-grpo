@@ -30,7 +30,7 @@ echo "GPU: $(nvidia-smi --query-gpu=name --format=csv,noheader) | $(date)"
 $PYTHON $BASE/src/train_reasoning_grpo.py \
     --num-train 2000 --num-generations 8 --max-steps 100 \
     --reward-type finer --learning-rate 3e-6 --beta 0.02 --temperature 1.0 \
-    --train-batch-size 8 --filter-gold \
+    --train-batch-size 16 --filter-gold \
     --output-dir "$OUT" --spider-dir "$SPIDER" --model-path "$MODEL"
 
 echo "Training done: $(date)"

@@ -9,10 +9,12 @@
 #SBATCH --output=/gpfs/work/aac/jiahuiwang24/reasoning_generator_3b/logs/a1_%j.out
 #SBATCH --error=/gpfs/work/aac/jiahuiwang24/reasoning_generator_3b/logs/a1_%j.err
 
-# A1: 投票自蒸馏 - 生成 SFT 数据（200 训练题 × 3prompt 投票）
+# A1: 投票自蒸馏 - 生成 SFT 数据（150 训练题 × 3prompt 投票）
+# v2: 150条（450次生成≈36分钟<50分钟上限；200条超时被杀过）
 BASE=/gpfs/work/aac/jiahuiwang24/reasoning_generator_3b
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+export PYTHONUNBUFFERED=1
 $BASE/envs/reasoning3b/bin/python $BASE/src/gen_vote_sft.py \
     --lora-path $BASE/checkpoints/p2a_500/checkpoint-25 \
-    --num-train 200 --n-prompts 3 --min-votes 2 \
+    --num-train 150 --n-prompts 3 --min-votes 2 \
     --output $BASE/data/vote_sft_data.json
