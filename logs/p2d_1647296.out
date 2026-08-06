@@ -1,0 +1,80 @@
+=== P2D: 3B + partial奖励 + 500条 + G=4 + 25步 ===
+GPU: NVIDIA GeForce RTX 3090 | Thu Aug  6 11:28:19 CST 2026
+Building dataset from: /gpfs/work/aac/jiahuiwang24/reasoning_generator_3b/data/spider_data
+Built dataset: 500 records
+Dataset: 500 examples
+First prompt length: 1 chars
+First db_id: department_management
+
+Loading model from: /gpfs/work/aac/jiahuiwang24/reasoning_generator_3b/models/Qwen2.5-Coder-3B-Instruct
+Model loaded. GPU: NVIDIA GeForce RTX 3090
+GPU memory: 5.75 GiB
+
+LoRA: r=16, alpha=32
+Target modules: {'up_proj', 'down_proj', 'q_proj', 'v_proj', 'k_proj', 'o_proj', 'gate_proj'}
+
+GRPO: num_generations=4, max_steps=25, lr=3e-06, beta=0.04, temperature=1.0
+
+Reward function: partial (1.0 / row-overlap / 0.2 executable / 0.0)
+
+============================================================
+Starting GRPO training...
+============================================================
+
+{'loss': 0.0, 'grad_norm': 0.09799876809120178, 'learning_rate': 2.52e-06, 'rewards/reward_func': 0.55, 'reward': 0.55, 'reward_std': 0.25773502588272096, 'completion_length': 360.625, 'kl': 0.00023301485925912856, 'epoch': 0.02}
+{'loss': 0.0, 'grad_norm': 0.07840780168771744, 'learning_rate': 1.9200000000000003e-06, 'rewards/reward_func': 0.3460714269429445, 'reward': 0.3460714269429445, 'reward_std': 0.12785714343190194, 'completion_length': 454.175, 'kl': 0.0002887864538934082, 'epoch': 0.04}
+{'loss': 0.0, 'grad_norm': 0.12429454922676086, 'learning_rate': 1.32e-06, 'rewards/reward_func': 0.39833333492279055, 'reward': 0.39833333492279055, 'reward_std': 0.1864856779575348, 'completion_length': 407.975, 'kl': 0.00030429260223172603, 'epoch': 0.06}
+{'loss': 0.0, 'grad_norm': 0.09659618139266968, 'learning_rate': 7.2e-07, 'rewards/reward_func': 0.22833333611488343, 'reward': 0.22833333611488343, 'reward_std': 0.23287415504455566, 'completion_length': 405.05, 'kl': 0.0002990749373566359, 'epoch': 0.08}
+{'loss': 0.0, 'grad_norm': 0.0003407426120247692, 'learning_rate': 1.2000000000000002e-07, 'rewards/reward_func': 0.1650000035762787, 'reward': 0.1650000035762787, 'reward_std': 0.17760952785611153, 'completion_length': 382.975, 'kl': 0.0002789789461530745, 'epoch': 0.1}
+{'train_runtime': 1559.7657, 'train_samples_per_second': 0.128, 'train_steps_per_second': 0.016, 'train_loss': 1.1237042344873772e-05, 'epoch': 0.1}
+
+Saving LoRA adapter to: /gpfs/work/aac/jiahuiwang24/reasoning_generator_3b/checkpoints/p2d_partial500
+Metadata saved to: /gpfs/work/aac/jiahuiwang24/reasoning_generator_3b/checkpoints/p2d_partial500/training_metadata.json
+
+Done! ✅
+
+Next step: run evaluation with:
+  python src/evaluate_after_grpo.py --lora-path /gpfs/work/aac/jiahuiwang24/reasoning_generator_3b/checkpoints/p2d_partial500
+Training done: Thu Aug  6 11:54:30 CST 2026
+Evaluating 100 items (start=0, limit=100)
+Batch size: 8
+
+Loading base model: /gpfs/work/aac/jiahuiwang24/reasoning_generator_3b/models/Qwen2.5-Coder-3B-Instruct
+Loading LoRA adapter: /gpfs/work/aac/jiahuiwang24/reasoning_generator_3b/checkpoints/p2d_partial500
+Loading tokenizer...
+Loading model...
+Loading LoRA adapter from: /gpfs/work/aac/jiahuiwang24/reasoning_generator_3b/checkpoints/p2d_partial500
+LoRA adapter loaded (unmerged).
+Model loaded in 3.56 seconds
+GPU: NVIDIA GeForce RTX 3090
+GPU memory: 5.86 GiB
+Agent ready. GPU: NVIDIA GeForce RTX 3090
+VRAM used: 5.86 GiB
+
+Loading DDL for all items...
+Ready to evaluate 100 items (DDL loaded)
+
+
+All 100 items processed in 371.34s (0.3 items/s)
+
+Items saved to: /gpfs/work/aac/jiahuiwang24/reasoning_generator_3b/outputs/p2d_partial500/items.json
+Summary saved to: /gpfs/work/aac/jiahuiwang24/reasoning_generator_3b/outputs/p2d_partial500/summary.json
+
+==================================================
+  POST-TRAINING EVALUATION SUMMARY
+==================================================
+  Parse success:         100/100 (100.0%)
+  Execution success:     81/100 (81.0%)
+  Execution match:       45/100 (45.0%)
+  SQL string match:      1/100 (1.0%)
+  Avg generation time:   3.71s
+  Total wall time:       371.34s
+==================================================
+
+📊 COMPARISON (before vs after GRPO):
+  Baseline (pre-train):  37.0%
+  After GRPO:            45.0%
+  Change:                +8.0% ↑
+=== P2D Result ===
+partial500: 45.0%  (三级500=50%, partial100=46%, 基线45%)
+Done: Thu Aug  6 12:00:49 CST 2026

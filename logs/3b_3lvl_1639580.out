@@ -1,0 +1,270 @@
+============================================
+3B + three_level reward + A40 + 修复后代码
+GPU: NVIDIA A40 | Tue Aug  4 20:40:01 CST 2026
+============================================
+
+=== Step 1: Baseline (3B zero-shot) ===
+Evaluating 100 items (start=0, limit=100)
+Batch size: 8
+
+Loading base model: /gpfs/work/aac/jiahuiwang24/reasoning_generator_3b/models/Qwen2.5-Coder-3B-Instruct
+No LoRA adapter — running baseline inference
+Loading tokenizer...
+Loading model...
+Model loaded in 3.07 seconds
+GPU: NVIDIA A40
+GPU memory: 5.75 GiB
+Agent ready. GPU: NVIDIA A40
+VRAM used: 5.75 GiB
+
+Loading DDL for all items...
+Ready to evaluate 100 items (DDL loaded)
+
+
+All 100 items processed in 184.38s (0.5 items/s)
+
+Items saved to: /gpfs/work/aac/jiahuiwang24/reasoning_generator_3b/outputs/3b_3lvl_baseline/items.json
+Summary saved to: /gpfs/work/aac/jiahuiwang24/reasoning_generator_3b/outputs/3b_3lvl_baseline/summary.json
+
+==================================================
+  POST-TRAINING EVALUATION SUMMARY
+==================================================
+  Parse success:         98/100 (98.0%)
+  Execution success:     58/100 (58.0%)
+  Execution match:       34/100 (34.0%)
+  SQL string match:      1/100 (1.0%)
+  Avg generation time:   1.84s
+  Total wall time:       184.38s
+==================================================
+
+📊 COMPARISON (before vs after GRPO):
+  Baseline (pre-train):  37.0%
+  After GRPO:            34.0%
+  Change:                -3.0% ↓
+
+=== Step 2: GRPO (three_level, G=4, 75 steps) ===
+Building dataset from: /gpfs/work/aac/jiahuiwang24/reasoning_generator_3b/data/spider_data
+Built dataset: 100 records
+Dataset: 100 examples
+First prompt length: 1 chars
+First db_id: department_management
+
+Loading model from: /gpfs/work/aac/jiahuiwang24/reasoning_generator_3b/models/Qwen2.5-Coder-3B-Instruct
+Model loaded. GPU: NVIDIA A40
+GPU memory: 5.75 GiB
+
+LoRA: r=16, alpha=32
+Target modules: {'gate_proj', 'v_proj', 'q_proj', 'k_proj', 'down_proj', 'o_proj', 'up_proj'}
+
+GRPO: num_generations=4, max_steps=75, lr=3e-06, beta=0.04, temperature=1.0
+
+Reward function: three_level (1.0/0.1/0.0)
+
+============================================================
+Starting GRPO training...
+============================================================
+
+{'loss': 0.0, 'grad_norm': 0.23897792398929596, 'learning_rate': 2.84e-06, 'rewards/reward_func': 0.1650000035762787, 'reward': 0.1650000035762787, 'reward_std': 0.2054700493812561, 'completion_length': 358.05, 'kl': 0.00020890739106107503, 'epoch': 0.05}
+{'loss': 0.0, 'grad_norm': 0.0006682630046270788, 'learning_rate': 2.64e-06, 'rewards/reward_func': 0.25, 'reward': 0.25, 'reward_std': 0.1, 'completion_length': 351.15, 'kl': 0.00025236616202164444, 'epoch': 0.1}
+{'loss': 0.0, 'grad_norm': 0.0006794205401092768, 'learning_rate': 2.44e-06, 'rewards/reward_func': 0.010000000149011612, 'reward': 0.010000000149011612, 'reward_std': 0.011547005921602248, 'completion_length': 443.3, 'kl': 0.0002942372171673924, 'epoch': 0.15}
+{'loss': 0.0, 'grad_norm': 0.7572707533836365, 'learning_rate': 2.24e-06, 'rewards/reward_func': 0.3649999976158142, 'reward': 0.3649999976158142, 'reward_std': 0.28380830883979796, 'completion_length': 352.85, 'kl': 0.0003503313986584544, 'epoch': 0.2}
+{'loss': 0.0, 'grad_norm': 0.19443896412849426, 'learning_rate': 2.0400000000000004e-06, 'rewards/reward_func': 0.3050000011920929, 'reward': 0.3050000011920929, 'reward_std': 0.4280654489994049, 'completion_length': 459.95, 'kl': 0.00026972094492521136, 'epoch': 0.25}
+{'loss': 0.0, 'grad_norm': 1.377450942993164, 'learning_rate': 1.84e-06, 'rewards/reward_func': 0.2100000012665987, 'reward': 0.2100000012665987, 'reward_std': 0.20712534561753274, 'completion_length': 440.0, 'kl': 0.00034051094262395055, 'epoch': 0.3}
+{'loss': 0.0, 'grad_norm': 0.0005309479893185198, 'learning_rate': 1.64e-06, 'rewards/reward_func': 0.15, 'reward': 0.15, 'reward_std': 0.1, 'completion_length': 439.7, 'kl': 0.0003119006345514208, 'epoch': 0.35}
+{'loss': 0.0, 'grad_norm': 0.0005471855401992798, 'learning_rate': 1.44e-06, 'rewards/reward_func': 0.03500000089406967, 'reward': 0.03500000089406967, 'reward_std': 0.010000000149011612, 'completion_length': 417.85, 'kl': 0.0003008278843481094, 'epoch': 0.4}
+{'loss': 0.0, 'grad_norm': 0.1710861325263977, 'learning_rate': 1.24e-06, 'rewards/reward_func': 0.2199999988079071, 'reward': 0.2199999988079071, 'reward_std': 0.1799999952316284, 'completion_length': 432.4, 'kl': 0.0003075569460634142, 'epoch': 0.45}
+{'loss': 0.0, 'grad_norm': 0.18981975317001343, 'learning_rate': 1.04e-06, 'rewards/reward_func': 0.28000000715255735, 'reward': 0.28000000715255735, 'reward_std': 0.27999999523162844, 'completion_length': 397.85, 'kl': 0.0003238370409235358, 'epoch': 0.5}
+{'loss': 0.0, 'grad_norm': 0.17016710340976715, 'learning_rate': 8.400000000000001e-07, 'rewards/reward_func': 0.22499999701976775, 'reward': 0.22499999701976775, 'reward_std': 0.3171253360807896, 'completion_length': 448.85, 'kl': 0.0002840284607373178, 'epoch': 0.55}
+{'loss': 0.0, 'grad_norm': 0.19085460901260376, 'learning_rate': 6.4e-07, 'rewards/reward_func': 0.3200000025331974, 'reward': 0.3200000025331974, 'reward_std': 0.4362954206764698, 'completion_length': 455.15, 'kl': 0.0002731169981416315, 'epoch': 0.6}
+{'loss': 0.0, 'grad_norm': 0.21555186808109283, 'learning_rate': 4.4e-07, 'rewards/reward_func': 0.21499999538064002, 'reward': 0.21499999538064002, 'reward_std': 0.23701704815030097, 'completion_length': 373.75, 'kl': 0.0002963544218800962, 'epoch': 0.65}
+{'loss': 0.0, 'grad_norm': 0.0005932048079557717, 'learning_rate': 2.4000000000000003e-07, 'rewards/reward_func': 0.055000000074505805, 'reward': 0.055000000074505805, 'reward_std': 0.11000000014901161, 'completion_length': 461.9, 'kl': 0.00026673596585169435, 'epoch': 0.7}
+{'loss': 0.0, 'grad_norm': 0.17904628813266754, 'learning_rate': 4e-08, 'rewards/reward_func': 0.4600000023841858, 'reward': 0.4600000023841858, 'reward_std': 0.29380831122398376, 'completion_length': 393.85, 'kl': 0.0002722905366681516, 'epoch': 0.75}
+{'train_runtime': 4037.192, 'train_samples_per_second': 0.074, 'train_steps_per_second': 0.019, 'train_loss': 1.160941154618437e-05, 'epoch': 0.75}
+
+Saving LoRA adapter to: /gpfs/work/aac/jiahuiwang24/reasoning_generator_3b/checkpoints/grpo_3b_3lvl
+Metadata saved to: /gpfs/work/aac/jiahuiwang24/reasoning_generator_3b/checkpoints/grpo_3b_3lvl/training_metadata.json
+
+Done! ✅
+
+Next step: run evaluation with:
+  python src/evaluate_after_grpo.py --lora-path /gpfs/work/aac/jiahuiwang24/reasoning_generator_3b/checkpoints/grpo_3b_3lvl
+Training done: Tue Aug  4 21:50:57 CST 2026
+
+=== Step 3: Evaluate checkpoints ===
+--- checkpoint-25 ---
+Evaluating 100 items (start=0, limit=100)
+Batch size: 8
+
+Loading base model: /gpfs/work/aac/jiahuiwang24/reasoning_generator_3b/models/Qwen2.5-Coder-3B-Instruct
+Loading LoRA adapter: /gpfs/work/aac/jiahuiwang24/reasoning_generator_3b/checkpoints/grpo_3b_3lvl/checkpoint-25
+Loading tokenizer...
+Loading model...
+Loading LoRA adapter from: /gpfs/work/aac/jiahuiwang24/reasoning_generator_3b/checkpoints/grpo_3b_3lvl/checkpoint-25
+LoRA adapter loaded (unmerged).
+Model loaded in 4.32 seconds
+GPU: NVIDIA A40
+GPU memory: 5.86 GiB
+Agent ready. GPU: NVIDIA A40
+VRAM used: 5.86 GiB
+
+Loading DDL for all items...
+Ready to evaluate 100 items (DDL loaded)
+
+
+All 100 items processed in 361.95s (0.3 items/s)
+
+Items saved to: /gpfs/work/aac/jiahuiwang24/reasoning_generator_3b/outputs/3b_3lvl_checkpoint-25/items.json
+Summary saved to: /gpfs/work/aac/jiahuiwang24/reasoning_generator_3b/outputs/3b_3lvl_checkpoint-25/summary.json
+
+==================================================
+  POST-TRAINING EVALUATION SUMMARY
+==================================================
+  Parse success:         98/100 (98.0%)
+  Execution success:     65/100 (65.0%)
+  Execution match:       40/100 (40.0%)
+  SQL string match:      1/100 (1.0%)
+  Avg generation time:   3.61s
+  Total wall time:       361.95s
+==================================================
+
+📊 COMPARISON (before vs after GRPO):
+  Baseline (pre-train):  37.0%
+  After GRPO:            40.0%
+  Change:                +3.0% ↑
+--- checkpoint-50 ---
+Evaluating 100 items (start=0, limit=100)
+Batch size: 8
+
+Loading base model: /gpfs/work/aac/jiahuiwang24/reasoning_generator_3b/models/Qwen2.5-Coder-3B-Instruct
+Loading LoRA adapter: /gpfs/work/aac/jiahuiwang24/reasoning_generator_3b/checkpoints/grpo_3b_3lvl/checkpoint-50
+Loading tokenizer...
+Loading model...
+Loading LoRA adapter from: /gpfs/work/aac/jiahuiwang24/reasoning_generator_3b/checkpoints/grpo_3b_3lvl/checkpoint-50
+LoRA adapter loaded (unmerged).
+Model loaded in 4.29 seconds
+GPU: NVIDIA A40
+GPU memory: 5.86 GiB
+Agent ready. GPU: NVIDIA A40
+VRAM used: 5.86 GiB
+
+Loading DDL for all items...
+Ready to evaluate 100 items (DDL loaded)
+
+
+All 100 items processed in 360.15s (0.3 items/s)
+
+Items saved to: /gpfs/work/aac/jiahuiwang24/reasoning_generator_3b/outputs/3b_3lvl_checkpoint-50/items.json
+Summary saved to: /gpfs/work/aac/jiahuiwang24/reasoning_generator_3b/outputs/3b_3lvl_checkpoint-50/summary.json
+
+==================================================
+  POST-TRAINING EVALUATION SUMMARY
+==================================================
+  Parse success:         95/100 (95.0%)
+  Execution success:     58/100 (58.0%)
+  Execution match:       34/100 (34.0%)
+  SQL string match:      1/100 (1.0%)
+  Avg generation time:   3.60s
+  Total wall time:       360.15s
+==================================================
+
+📊 COMPARISON (before vs after GRPO):
+  Baseline (pre-train):  37.0%
+  After GRPO:            34.0%
+  Change:                -3.0% ↓
+--- checkpoint-75 ---
+Evaluating 100 items (start=0, limit=100)
+Batch size: 8
+
+Loading base model: /gpfs/work/aac/jiahuiwang24/reasoning_generator_3b/models/Qwen2.5-Coder-3B-Instruct
+Loading LoRA adapter: /gpfs/work/aac/jiahuiwang24/reasoning_generator_3b/checkpoints/grpo_3b_3lvl/checkpoint-75
+Loading tokenizer...
+Loading model...
+Loading LoRA adapter from: /gpfs/work/aac/jiahuiwang24/reasoning_generator_3b/checkpoints/grpo_3b_3lvl/checkpoint-75
+LoRA adapter loaded (unmerged).
+Model loaded in 4.32 seconds
+GPU: NVIDIA A40
+GPU memory: 5.86 GiB
+Agent ready. GPU: NVIDIA A40
+VRAM used: 5.86 GiB
+
+Loading DDL for all items...
+Ready to evaluate 100 items (DDL loaded)
+
+
+All 100 items processed in 358.77s (0.3 items/s)
+
+Items saved to: /gpfs/work/aac/jiahuiwang24/reasoning_generator_3b/outputs/3b_3lvl_checkpoint-75/items.json
+Summary saved to: /gpfs/work/aac/jiahuiwang24/reasoning_generator_3b/outputs/3b_3lvl_checkpoint-75/summary.json
+
+==================================================
+  POST-TRAINING EVALUATION SUMMARY
+==================================================
+  Parse success:         95/100 (95.0%)
+  Execution success:     57/100 (57.0%)
+  Execution match:       36/100 (36.0%)
+  SQL string match:      1/100 (1.0%)
+  Avg generation time:   3.58s
+  Total wall time:       358.77s
+==================================================
+
+📊 COMPARISON (before vs after GRPO):
+  Baseline (pre-train):  37.0%
+  After GRPO:            36.0%
+  Change:                -1.0% ↓
+--- final ---
+Evaluating 100 items (start=0, limit=100)
+Batch size: 8
+
+Loading base model: /gpfs/work/aac/jiahuiwang24/reasoning_generator_3b/models/Qwen2.5-Coder-3B-Instruct
+Loading LoRA adapter: /gpfs/work/aac/jiahuiwang24/reasoning_generator_3b/checkpoints/grpo_3b_3lvl
+Loading tokenizer...
+Loading model...
+Loading LoRA adapter from: /gpfs/work/aac/jiahuiwang24/reasoning_generator_3b/checkpoints/grpo_3b_3lvl
+LoRA adapter loaded (unmerged).
+Model loaded in 4.03 seconds
+GPU: NVIDIA A40
+GPU memory: 5.86 GiB
+Agent ready. GPU: NVIDIA A40
+VRAM used: 5.86 GiB
+
+Loading DDL for all items...
+Ready to evaluate 100 items (DDL loaded)
+
+
+All 100 items processed in 363.93s (0.3 items/s)
+
+Items saved to: /gpfs/work/aac/jiahuiwang24/reasoning_generator_3b/outputs/3b_3lvl_final/items.json
+Summary saved to: /gpfs/work/aac/jiahuiwang24/reasoning_generator_3b/outputs/3b_3lvl_final/summary.json
+
+==================================================
+  POST-TRAINING EVALUATION SUMMARY
+==================================================
+  Parse success:         95/100 (95.0%)
+  Execution success:     57/100 (57.0%)
+  Execution match:       36/100 (36.0%)
+  SQL string match:      1/100 (1.0%)
+  Avg generation time:   3.64s
+  Total wall time:       363.93s
+==================================================
+
+📊 COMPARISON (before vs after GRPO):
+  Baseline (pre-train):  37.0%
+  After GRPO:            36.0%
+  Change:                -1.0% ↓
+
+============================================
+=== 3B three_level 实验汇总 ===
+============================================
+阶段                      Match
+------------------------------
+基线(训练前)                34.0%
+训练25步                  40.0%
+训练50步                  34.0%
+训练75步                  36.0%
+训练75步最终                36.0%
+
+最佳: 训练25步 = 40.0%
+基线: 37.0%
+提升: +3.0%
+
+Done: Tue Aug  4 22:16:03 CST 2026
