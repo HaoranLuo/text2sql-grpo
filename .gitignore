@@ -34,3 +34,4 @@ s1.sh
 # HPC 脚本内嵌密钥的变体
 scripts/run_api_gen.sh
 scripts/s1.sh
+.research_tmp/
