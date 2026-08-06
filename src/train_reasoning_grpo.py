@@ -413,6 +413,11 @@ def main() -> None:
         help="Reward function: binary (0/1), three_level (1.0/0.1/0.0), "
              "or partial (1.0 / row-overlap fraction / 0.2 executable / 0.0)",
     )
+    parser.add_argument(
+        "--train-batch-size", type=int, default=None,
+        help="per_device_train_batch_size 覆盖值（默认 num_generations*4；"
+             "24GB 3090 训练 OOM 时调小到 8/4）",
+    )
     args = parser.parse_args()
 
     spider_dir = args.spider_dir
@@ -484,7 +489,11 @@ def main() -> None:
         # 4x num_generations so each step processes 4 distinct prompts;
         # batch_size=num_generations would process only 1 prompt/step and
         # leave most of the dataset unseen within max_steps.
-        per_device_train_batch_size=args.num_generations * 4,
+        # --train-batch-size overrides (24GB GPUs OOM with 4x on 500+ samples).
+        per_device_train_batch_size=(
+            args.train_batch_size if args.train_batch_size
+            else args.num_generations * 4
+        ),
         gradient_accumulation_steps=1,
         learning_rate=args.learning_rate,
         logging_steps=5,

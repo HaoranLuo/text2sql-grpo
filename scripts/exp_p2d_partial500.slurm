@@ -27,6 +27,7 @@ echo "GPU: $(nvidia-smi --query-gpu=name --format=csv,noheader) | $(date)"
 $PYTHON $BASE/src/train_reasoning_grpo.py \
     --num-train 500 --num-generations 4 --max-steps 25 \
     --reward-type partial --learning-rate 3e-6 --beta 0.04 --temperature 1.0 \
+    --train-batch-size 8 \
     --output-dir "$OUT" --spider-dir "$SPIDER" --model-path "$MODEL"
 
 echo "Training done: $(date)"
