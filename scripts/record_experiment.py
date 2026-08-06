@@ -155,13 +155,16 @@ def generate_charts():
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--summary", required=True, help="summary.json 路径")
-    parser.add_argument("--name", required=True, help="实验名（对应 output 目录名）")
+    parser.add_argument("--summary", default=None, help="summary.json 路径")
+    parser.add_argument("--name", default=None, help="实验名（对应 output 目录名）")
     parser.add_argument("--method", default="", help="方法描述")
     parser.add_argument("--notes", default="", help="备注")
-    parser.add_argument("--charts", action="store_true", help="同时生成图表")
+    parser.add_argument("--charts", action="store_true", help="生成图表（可单独使用）")
     args = parser.parse_args()
 
-    record(args.summary, args.name, args.method, args.notes)
+    if args.summary and args.name:
+        record(args.summary, args.name, args.method, args.notes)
+    elif not args.charts:
+        parser.error("需要 --summary 和 --name，或使用 --charts 单独生成图表")
     if args.charts:
         generate_charts()
