@@ -282,6 +282,10 @@ def create_reward_function(spider_dir: str, reward_type: str = "three_level"):
         "partial"     — 1.0 exact match; executable but wrong gets fractional
                         credit: overlap/gold_rows when column counts match,
                         else a flat 0.2 executability bonus; 0.0 not executable
+        "finer"       — FINER-SQL 式非负组合（调研共识，PaVeRL 非负实证）：
+                        1.0 完全匹配；可执行但错 = 0.5 + 0.5×atomic(Jaccard)
+                        （组内不扁平 → 梯度不消失）；gold 失败 pred 成功 = 0.5；
+                        执行失败 = 0.0。细粒度分只做组内 tie-break。
     """
     executor = DatabaseExecutor(spider_dir)  # read-only, safety-checked
 
@@ -355,6 +359,15 @@ def create_reward_function(spider_dir: str, reward_type: str = "three_level"):
                     )
                     # Combine: 0.3 executability + 0.7 atomic (dense signal)
                     rewards.append(0.3 + 0.7 * atomic_score)
+                elif reward_type == "finer":
+                    # FINER 式非负组合（调研共识 v3）：
+                    # 可执行但错 = 0.5 + 0.5×atomic(Jaccard)
+                    # → 组内不扁平（不同 SQL 有不同原子分），梯度不消失；
+                    #   非负（PaVeRL 实证正负混合不稳定）
+                    atomic_score = _get_atomic_reward().score_against_list(
+                        sql, [gold_sql],
+                    )
+                    rewards.append(0.5 + 0.5 * atomic_score)
                 else:
                     rewards.append(0.0)           # binary: wrong = 0
 
@@ -364,6 +377,8 @@ def create_reward_function(spider_dir: str, reward_type: str = "three_level"):
                     rewards.append(0.1)
                 elif reward_type == "partial":
                     rewards.append(0.2)
+                elif reward_type == "finer":
+                    rewards.append(0.5)  # 非负 executability 分
                 else:
                     rewards.append(0.0)
             else:
@@ -425,9 +440,10 @@ def main() -> None:
     )
     parser.add_argument(
         "--reward-type", type=str, default="three_level",
-        choices=["binary", "three_level", "partial", "atomic"],
+        choices=["binary", "three_level", "partial", "atomic", "finer"],
         help="Reward function: binary (0/1), three_level (1.0/0.1/0.0), "
-             "or partial (1.0 / row-overlap fraction / 0.2 executable / 0.0)",
+             "partial (row-overlap), atomic (FINER Jaccard), "
+             "finer (FINER式非负组合: 1.0 匹配 / 0.5+0.5×atomic / 0)",
     )
     parser.add_argument(
         "--train-batch-size", type=int, default=None,
@@ -473,6 +489,12 @@ def main() -> None:
         print(f"Loading existing LoRA (SFT cold-start): {args.lora_init}")
         from peft import PeftModel
         model = PeftModel.from_pretrained(model, args.lora_init, is_trainable=True)
+        # TRL 对传入的 PeftModel 不再重复包装；需显式确保 adapter 可训练
+        # （否则 GRPO 报 "element 0 of tensors does not require grad"）
+        model.train()
+        for name, param in model.named_parameters():
+            if "lora_" in name:
+                param.requires_grad = True
     model.gradient_checkpointing_enable()
 
     tokenizer = AutoTokenizer.from_pretrained(
@@ -556,6 +578,8 @@ def main() -> None:
         rtype_label = "three_level (1.0/0.1/0.0)"
     elif args.reward_type == "partial":
         rtype_label = "partial (1.0 / row-overlap / 0.2 executable / 0.0)"
+    elif args.reward_type == "finer":
+        rtype_label = "finer (1.0 match / 0.5+0.5×atomic exec-but-wrong / 0.0 fail)"
     else:
         rtype_label = "binary (1.0/0.0)"
     print(f"\nReward function: {rtype_label}")

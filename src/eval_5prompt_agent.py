@@ -132,7 +132,7 @@ def main():
         ddl, _ = loader.get_ddl_with_source(db_id)
         prompts = build_prompt_variants(question, ddl)[:n_prompts]
 
-        exec_results = []   # (full_rows_tuple, truncated_flag)
+        exec_results = []   # (full_rows_tuple, truncated_flag, sql)
         for p in prompts:
             chat = tokenizer.apply_chat_template(
                 [{'role': 'user', 'content': p}], tokenize=False, add_generation_prompt=True)
@@ -147,15 +147,26 @@ def main():
                 r = executor.execute(db_id, parsed['sql'])
                 if r['success']:
                     exec_results.append((tuple(tuple(row) for row in r['full_rows']),
-                                         r['full_rows_truncated']))
+                                         r['full_rows_truncated'], parsed['sql']))
 
-        # 多数投票（修复后口径：full_rows 比较 + truncated 则判负）
+        # 执行结果分组投票（Query and Conquer 式，arXiv 2503.24364）：
+        # 按执行结果分组计数，选最大组；平局时优先更短的 SQL
+        # （修复后口径：full_rows 比较 + truncated 则判负）
         voted_rows, vc, voted_truncated = [], 0, False
         if exec_results:
-            mc = Counter(e[0] for e in exec_results).most_common(1)[0]
-            voted_rows = [list(row) for row in mc[0]]
-            vc = mc[1]
-            voted_truncated = any(e[1] for e in exec_results if e[0] == mc[0])
+            groups = {}
+            for rows, truncated, sql in exec_results:
+                g = groups.setdefault(rows, {"count": 0, "truncated": False,
+                                             "shortest_sql": sql})
+                g["count"] += 1
+                g["truncated"] = g["truncated"] or truncated
+                if len(sql) < len(g["shortest_sql"]):
+                    g["shortest_sql"] = sql
+            best = max(groups.values(), key=lambda g: g["count"])
+            voted_rows = [list(row) for row in
+                          next(k for k, v in groups.items() if v is best)]
+            vc = best["count"]
+            voted_truncated = best["truncated"]
 
         gold_r = executor.execute(db_id, gold_sql)
         gold_rows = gold_r['full_rows'] if gold_r['success'] else []
