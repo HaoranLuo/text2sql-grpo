@@ -22,7 +22,7 @@ sys.path.insert(0, str(PROJECT / 'src'))
 from reasoning_generator_agent import ReasoningGeneratorAgent
 from spider_utils import SpiderLoader, DatabaseExecutor, compare_execution_results
 
-BASE_MODEL = str(PROJECT / 'models' / 'Qwen2.5-Coder-3B-Instruct')
+BASE_MODEL = str(PROJECT / 'models' / 'Qwen2.5-Coder-3B-Instruct')  # 默认，可用 --base-model 覆盖
 SPIDER = str(PROJECT / 'data' / 'spider_data')
 
 
@@ -86,13 +86,15 @@ Write the SQL as a SINGLE line without any comments or explanation."""
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--lora-path', required=True, help='LoRA adapter 目录（含 checkpoint）')
+    parser.add_argument('--lora-path', default=None, help='LoRA adapter 目录（省略=无 LoRA 基线）')
     parser.add_argument('--output-dir', required=True, help='输出目录')
     parser.add_argument('--limit', type=int, default=100)
     parser.add_argument('--start-index', type=int, default=0)
     parser.add_argument('--max-new-tokens', type=int, default=256)
     parser.add_argument('--n-prompts', type=int, default=5, choices=[5, 7],
                         help='投票用多少个 prompt 视角 (5 或 7)')
+    parser.add_argument('--base-model', default=BASE_MODEL,
+                        help='基础模型路径（默认 3B）')
     args = parser.parse_args()
 
     lora = args.lora_path
@@ -100,16 +102,20 @@ def main():
     limit = args.limit
     start_index = args.start_index
     n_prompts = args.n_prompts
-    print(f"{n_prompts}prompt投票 | LoRA: {lora} | {limit} 条 (start={start_index})")
+    base_model = args.base_model
+    print(f"{n_prompts}prompt投票 | LoRA: {lora} | base: {base_model} | {limit} 条 (start={start_index})")
 
-    from peft import PeftModel
-    tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL, local_files_only=True, trust_remote_code=True)
+    tokenizer = AutoTokenizer.from_pretrained(base_model, local_files_only=True, trust_remote_code=True)
     tokenizer.pad_token = tokenizer.eos_token
     tokenizer.pad_token_id = tokenizer.eos_token_id
     base = AutoModelForCausalLM.from_pretrained(
-        BASE_MODEL, torch_dtype=torch.bfloat16, device_map={'': 0},
+        base_model, torch_dtype=torch.bfloat16, device_map={'': 0},
         local_files_only=True, trust_remote_code=True)
-    model = PeftModel.from_pretrained(base, lora)
+    if lora:
+        from peft import PeftModel
+        model = PeftModel.from_pretrained(base, lora)
+    else:
+        model = base
     model.eval()
     model.config.pad_token_id = tokenizer.eos_token_id
 
