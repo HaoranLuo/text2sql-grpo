@@ -152,7 +152,7 @@ def main():
         # 执行结果分组投票（Query and Conquer 式，arXiv 2503.24364）：
         # 按执行结果分组计数，选最大组；平局时优先更短的 SQL
         # （修复后口径：full_rows 比较 + truncated 则判负）
-        voted_rows, vc, voted_truncated = [], 0, False
+        voted_rows, vc, voted_truncated, selected_sql = [], 0, False, ""
         if exec_results:
             groups = {}
             for rows, truncated, sql in exec_results:
@@ -167,6 +167,7 @@ def main():
                           next(k for k, v in groups.items() if v is best)]
             vc = best["count"]
             voted_truncated = best["truncated"]
+            selected_sql = best["shortest_sql"]
 
         gold_r = executor.execute(db_id, gold_sql)
         gold_rows = gold_r['full_rows'] if gold_r['success'] else []
@@ -181,7 +182,9 @@ def main():
             match_count += 1
 
         results.append({'di': item['dataset_index'], 'match': is_match,
-                        'votes': vc, 'truncated': voted_truncated})
+                        'votes': vc, 'truncated': voted_truncated,
+                        'db_id': db_id,
+                        'predicted_sql': selected_sql})
         if (i + 1) % 10 == 0:
             print(f"  [{i+1}/{limit}] match={match_count}/{i+1} ({match_count/(i+1):.1%})")
 
