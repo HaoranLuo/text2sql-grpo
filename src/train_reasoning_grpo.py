@@ -100,7 +100,7 @@ def extract_sql(text: str) -> str:
 # Dataset builder
 # ===================================================================
 
-def build_dataset(spider_dir: str, limit: int = 100) -> Dataset:
+def build_dataset(spider_dir: str, limit: int = 100, filter_gold: bool = False) -> Dataset:
     """Build a HuggingFace Dataset from Spider train data.
 
     Each row contains:
@@ -109,6 +109,9 @@ def build_dataset(spider_dir: str, limit: int = 100) -> Dataset:
         query    — gold SQL (for reward computation, NEVER shown to model)
         db_id    — database identifier (for SQLite execution)
         ddl      — DDL schema (informational, not used directly by reward func)
+
+    filter_gold=True 剔除 gold SQL 无法在库上执行成功的样本
+    （减少奖励噪声：多义/坏标注的题目会让模型学到错误模式）
     """
     loader = SpiderLoader(spider_dir)
 
@@ -125,10 +128,23 @@ def build_dataset(spider_dir: str, limit: int = 100) -> Dataset:
     records: List[Dict[str, str]] = []
     skipped = 0
 
+    # 执行过滤用（懒加载，只有 filter_gold=True 才建 executor）
+    executor = None
+    if filter_gold:
+        from spider_utils import DatabaseExecutor
+        executor = DatabaseExecutor(spider_dir)
+
     for item in train_data:
         question: str = item["question"]
         query: str = item["query"]
         db_id: str = item["db_id"]
+
+        # 可选：gold SQL 执行过滤（剔除执行失败的坏标注样本）
+        if executor is not None:
+            gold_out = executor.execute(db_id, query)
+            if not gold_out["success"]:
+                skipped += 1
+                continue
 
         # Obtain DDL (prefer sqlite_master, fallback to tables.json)
         try:
@@ -418,6 +434,14 @@ def main() -> None:
         help="per_device_train_batch_size 覆盖值（默认 num_generations*4；"
              "24GB 3090 训练 OOM 时调小到 8/4）",
     )
+    parser.add_argument(
+        "--lora-init", type=str, default=None,
+        help="在已有 LoRA（如 SFT 冷启动）基础上继续 GRPO（真正的两阶段）",
+    )
+    parser.add_argument(
+        "--filter-gold", action="store_true",
+        help="剔除 gold SQL 执行失败的训练样本（减少奖励噪声）",
+    )
     args = parser.parse_args()
 
     spider_dir = args.spider_dir
@@ -428,7 +452,8 @@ def main() -> None:
     # 1. Build dataset
     # ------------------------------------------------------------------
     print(f"Building dataset from: {spider_dir}")
-    dataset = build_dataset(spider_dir, limit=args.num_train)
+    dataset = build_dataset(spider_dir, limit=args.num_train,
+                            filter_gold=args.filter_gold)
     print(f"Dataset: {len(dataset)} examples")
     print(f"First prompt length: {len(dataset[0]['prompt'])} chars")
     print(f"First db_id: {dataset[0]['db_id']}")
@@ -444,6 +469,10 @@ def main() -> None:
         local_files_only=True,
         trust_remote_code=True,
     )
+    if args.lora_init:
+        print(f"Loading existing LoRA (SFT cold-start): {args.lora_init}")
+        from peft import PeftModel
+        model = PeftModel.from_pretrained(model, args.lora_init, is_trainable=True)
     model.gradient_checkpointing_enable()
 
     tokenizer = AutoTokenizer.from_pretrained(
@@ -466,19 +495,24 @@ def main() -> None:
     # ------------------------------------------------------------------
     # 3. LoRA configuration
     # ------------------------------------------------------------------
-    lora_config = LoraConfig(
-        r=16,
-        lora_alpha=32,
-        target_modules=[
-            "q_proj", "k_proj", "v_proj", "o_proj",
-            "gate_proj", "up_proj", "down_proj",
-        ],
-        lora_dropout=0.05,
-        bias="none",
-        task_type="CAUSAL_LM",
-    )
-    print(f"\nLoRA: r={lora_config.r}, alpha={lora_config.lora_alpha}")
-    print(f"Target modules: {lora_config.target_modules}")
+    # 已有 LoRA（lora-init）时不再新建 peft_config（TRL 不重复包装）
+    lora_config = None
+    if not args.lora_init:
+        lora_config = LoraConfig(
+            r=16,
+            lora_alpha=32,
+            target_modules=[
+                "q_proj", "k_proj", "v_proj", "o_proj",
+                "gate_proj", "up_proj", "down_proj",
+            ],
+            lora_dropout=0.05,
+            bias="none",
+            task_type="CAUSAL_LM",
+        )
+    print(f"\nLoRA: {lora_config if lora_config else '(继承自 --lora-init 的适配器)'}")
+    if lora_config:
+        print(f"r={lora_config.r}, alpha={lora_config.lora_alpha}")
+        print(f"Target modules: {lora_config.target_modules}")
 
     # ------------------------------------------------------------------
     # 4. GRPO configuration
@@ -535,7 +569,7 @@ def main() -> None:
         args=grpo_config,
         train_dataset=dataset,
         processing_class=tokenizer,
-        peft_config=lora_config,
+        peft_config=lora_config,  # None → 使用 --lora-init 传入的适配器继续训练
     )
 
     print("\n" + "=" * 60)
