@@ -102,8 +102,12 @@ def normalize_execution_result(
 
     rows = result.get("full_rows") or []
     if not rows:
-        # 成功但零行：FINER 在 API 返回 rows=None 时走 SUCCESS_ROWS_COUNT
-        return f"SUCCESS_ROWS_COUNT:{result.get('row_count', 0)}"
+        # 成功但零行：生成空 SUCCESS_VALUES 签名。
+        # vav 的 is_empty 会先过滤它，但 fallback（所有组被过滤）会选回它——
+        # 空结果可能是正确答案（如无匹配行查询），必须保留为候选项。
+        # （旧实现返回 SUCCESS_ROWS_COUNT:0 → vav 永远匹配不到 → NO_RESULTS
+        #   丢掉了"条件无匹配"这类题的正确预测，官方评估 -8.7%）
+        return "SUCCESS_VALUES:"
 
     vals = _rows_to_value_tuples_agnostic(rows)
     row_strings = ["|".join(map(str, row)) for row in vals]
@@ -434,8 +438,8 @@ def _run_self_tests() -> int:
     check("norm: failure -> ERROR: prefixed",
           normalize_execution_result(r_fail).startswith("ERROR: near"))
     r_empty = {"success": True, "full_rows": [], "row_count": 0, "full_rows_truncated": False}
-    check("norm: empty success -> SUCCESS_ROWS_COUNT:0",
-          normalize_execution_result(r_empty) == "SUCCESS_ROWS_COUNT:0")
+    check("norm: empty success -> SUCCESS_VALUES: (空签名，vav fallback 可选中)",
+          normalize_execution_result(r_empty) == "SUCCESS_VALUES:")
     r_rows = {"success": True, "full_rows": [[1, "a"], ["a", 1], [2, "b"]], "row_count": 3, "full_rows_truncated": False}
     # 行内值排序：[1,"a"] -> "1|a"，["a",1] -> "1|a"（去重），[2,"b"] -> "2|b"
     check("norm: row-internal sort + row dedup",
