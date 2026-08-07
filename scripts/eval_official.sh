@@ -24,7 +24,11 @@ for it in items:
     sql = ' '.join(sql.split())  # 折叠空白为单空格
     if not sql:
         continue  # parse 失败 → 跳过（同步跳过 gold）
-    d = dev[it['dataset_index']]
+    # 兼容两种字段名：eval_5prompt_agent 用 'di'，其他用 'dataset_index'
+    idx = it.get('dataset_index', it.get('di'))
+    if idx is None:
+        continue
+    d = dev[idx]
     pred_lines.append(sql)
     gold_lines.append(f\"{d['query'].strip().rstrip(';')}\t{d['db_id']}\")
 
