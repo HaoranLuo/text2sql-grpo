@@ -1,92 +1,80 @@
 # 项目交接文档（HANDOFF）
 
-> 新对话开始时先读这个文件。最后更新：2026-08-05
+> 新对话开始时先读这个文件。最后更新：2026-08-07
 
 ## 一、项目一句话
 
-用 GRPO 强化学习训练 3B/7B 模型做 Text-to-SQL（Spider 数据集），已修复 7 个静默配置 bug，当前验证"训练+多prompt投票"最优组合。
+Text-to-SQL GRPO（Qwen2.5-Coder 3B/7B + Spider）：完成自身实验矩阵（3B 45→71% 子集/68.5% 全量）、官方评估口径打通、完整复刻验证顶级论文 FINER-SQL（85% 真实）。
 
-## 二、核心结果（修复后真实数字）
+## 二、核心结果（最终口径）
 
-| 实验 | Match |
-|------|:---:|
-| 3B 零样本基线 | 45% |
-| 3B 三级奖励 G=4 25步 | **50%** ✅ |
-| 3B 训练后 3prompt 投票 | **65%** |
-| 3B 训练后 5prompt 投票 | **70%** 🏆 3B最佳 |
-| 7B 零样本 | 81% |
-| 7B 3prompt 投票 | **85%** 🏆 项目最佳 |
-| 7B 训练后投票 | 84% |
-| P2A-A1 (三级 G=8) | 47% |
-| C2 (partial G=8) | 46% |
+| 实验 | 子集100 官方EX | 全量1034 |
+|------|:---:|:---:|
+| 3B 基线 | 41.4% | — |
+| 3B 训练后 | 49.0% | 54.2%（自定义） |
+| **3B 训练+5p投票** | **68.1%** | 68.5%（自定义） |
+| 7B 基线 | 78.0% | **67.5%**（官方） |
+| FINER-3B 单次 | 77.3% | — |
+| FINER-3B n=30 vav | — | **76.6%**（官方）/ ~85%（自定义≈论文） |
 
-**关键结论**：
-- 推理增强（投票）> 训练（对已强模型）
-- 3B 训练有效（+5%），7B 训练饱和
-- **G=4 > G=8**（3B 甜点）
-- 25 步是 3B 甜点，50 步起过拟合
-- 多prompt视角 >> 随机采样（85% vs 54%）
-- **投票数 3→5 再 +5%**（65%→70%），更多视角 = 更高上界
-- **修复验证通过**：11 项代码审查修复后重跑基线/训练后 = 45%/50% 完全一致
+## 三、关键结论（10 条，详见 FINAL_SUMMARY.md）
 
-## 三、HPC 登录
+1. 投票是最强杠杆（全量 +14.3pp）；5p 是甜点
+2. 前 100 条子集偏易 +10pp——必须全量
+3. 三级奖励是 3B 唯一有效奖励（50% 天花板）
+4. 训练侧突破需推理蒸馏前置（FINER Step 1）
+5. vav 投票 > 简单投票；空结果 bug 已修复（+6.4pp）
+
+## 四、HPC 登录与资源
 
 ```bash
 ssh jiahuiwang24@login.hpc.xjtlu.edu.cn
 cd ~/reasoning_generator_3b
+# 分区: aiaca40 (qos=1a40, 8h) / gpudebug (qos=gpudebug, 50min)
+# 环境: envs/reasoning3b/bin/python
+# 权重: models/FINER-SQL-3B-Spider（完整，344+90 张量已验证）
 ```
 
-- 分区：aiaca40 (A40, qos=1a40) / gpudebug (3090, qos=gpudebug)
-- QoS 限制：每个分区同时 1 个作业
-- 环境：envs/reasoning3b/bin/python
+## 五、后续计划（详见 NEXT_STEPS.md）
 
-## 四、运行中的作业（检查）
+1. **① 推理蒸馏**（~1 天）：DeepSeek API 生成思考+SQL → 过滤 → SFT → 评估（50→60-70%）
+2. **② 评分排查**（~半天）：官方 EX 76.6% vs 85% 的差异（评估器版本/plug_value/多实例库）
+3. **③ 大规模 GRPO**（2-3 天，依赖①）：全量 8659 + G32 + 四分量奖励
+4. 超过 FINER 的机会：多视角投票（5p×采样）、更强教师池、7B 基座、迭代蒸馏
 
-```bash
-squeue -u jiahuiwang24
-```
-
-（2026-08-05 晚：全部完成，GPU 空闲。验证作业 rev_base/rev_trained 已完成，数字一致。）
-
-## 五、关键文件
+## 六、关键文件
 
 ```
-src/train_reasoning_grpo.py    # GRPO训练（--reward-type: binary/three_level/partial/atomic）
-src/reasoning_generator_agent.py  # 推理Agent（chat格式+注释剥离）
-src/evaluate_after_grpo.py     # 评估
-src/atomic_ops.py + atomic_reward.py  # FINER原子奖励
-src/gen_filtered_sft.py        # SFT数据生成（需API）
-scripts/exp_c3_atomic.slurm    # C3 原子奖励
-scripts/phase2_a_scan.slurm    # P2A 数据量扫描
-scripts/record_experiment.py   # 实验记录系统
-scripts/preflight_check.sh     # 16项训练前检查
-FINAL_REPORT.md / EXPERIMENT_MATRIX.md / PHASE2_PLAN.md
+FINAL_SUMMARY.md            # 最终总结（10 条发现）
+FINAL_REPORT.md             # 第一阶段完整报告
+EXPERIMENT_MATRIX.md        # 40+ 实验总表
+OFFICIAL_EVAL.md            # 官方口径全景 + 复刻终验
+NEXT_STEPS.md               # 后续计划与机会分析
+RESEARCH_NOTES.md           # 14 agent 调研结论
+docs/FINER_REPLICATION_PLAN.md  # 复刻路线图（27KB）
+finer_port/                 # vav 投票移植（28 项自测）
+scripts/eval_official.sh    # 官方评估器
+data/spider_data/database/  # test-suite 多实例库
 ```
-
-## 六、下一步（GPU 空闲，按优先级）
-
-1. **7B 训练后 × 5prompt 投票**（验证 3B 的 3→5 增益是否在 7B 重现；M5plus 显示 5prompt+仲裁=85% 饱和，预期收益低）
-2. **3B 投票数据量扫描**：用 5prompt 投票重测 P2A 系列 checkpoint（100/500/2000/7000）
-3. SFT 冷启动（gold SQL，本地构建，无需 API）
-4. 官方 test-suite 评测器
-5. 7B 关键实验修复验证（81%/85% 是修复前评估，可重跑确认）
-6. GitHub 推送（网络不稳，手动推）
-
-> 自动监控：Claude 会话内 cron（15,45 * * * *）每 30 分钟检查作业+记录+推送，会话结束即失效，需重新建立。
->
-> **如何重建监控**：新会话说"建立自动监控"即可。Claude 会调用 CronCreate 用 `15,45 * * * *` 重建，监控指令=查 squeue→tail 日志→找新 summary→记录→更新报告→git push→崩溃修复重提。
 
 ## 七、GitHub
 
 - 仓库：https://github.com/HaoranLuo/text2sql-grpo（私有）
-- 推送可能失败（网络），重试或开梯子
+- 最近提交：e3951d4（最终总结）
+- 推送失败时重试或开代理
 
-## 八、重要教训（别忘）
+## 八、重要教训
 
-1. 训练/推理生成长度必须一致（512）
-2. prompt 必须是 chat 格式（messages 列表）
-3. 奖励/评估逻辑必须对齐
-4. pad/eos + model.config 都要统一
-5. 评估脚本要处理多语句 SQL
-6. G=4 对 3B 最优，G=8 稀释信号
-7. 提交前跑 preflight_check.sh
+1. prompt 必须是 chat 格式（messages 列表）
+2. 生成长度训练/推理必须一致（512）
+3. 评估必须全量 1034 + 官方口径（子集不可比）
+4. HF 大文件下载要等进程完全退出再使用（分片无校验）
+5. vav 投票的空结果（0 行）必须是 SUCCESS_VALUES 签名（否则丢题）
+6. lora-init 用 merge_and_unload（直接传 PeftModel 给 TRL 会 requires_grad 报错）
+7. 提交训练前跑 grpo-preflight skill
+
+## 九、自动监控
+
+- 定时检查已停止（2026-08-07 用户要求）
+- 重建方法：新会话说"建立自动监控"，用 CronCreate `17,47 * * * *`
+- 监控指令：查 squeue → tail 日志 → 记录 → 更新报告 → git push
