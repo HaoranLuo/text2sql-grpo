@@ -38,8 +38,16 @@ sys.path.insert(0, str(PROJECT / "src"))
 from spider_utils import SpiderLoader
 from reasoning_generator_agent import ReasoningGeneratorAgent
 
+try:
+    from transformers import AutoTokenizer
+    _HAS_TOKENIZER = True
+except Exception:
+    AutoTokenizer = None
+    _HAS_TOKENIZER = False
+
 GOLD_SQL_TMPL = "```sql\n{query}\n```"
 _SQL_BLOCK_RE = re.compile(r"```sql\s*(.*?)```", re.IGNORECASE | re.DOTALL)
+MAX_PROMPT_TOKENS = 1536  # 与推理端 prompt 截断窗口一致(监管审查 P2 对齐)
 
 
 def load_train_items(spider_dir: str) -> List[Dict[str, Any]]:
@@ -115,6 +123,13 @@ def load_distilled(path: str, loader: SpiderLoader) -> List[Dict[str, str]]:
         if not completion:
             skipped += 1
             continue
+        # P2 修复(监管审查): 剔除无 SQL 块(API 截断)与双 <think> 畸形样本
+        if not _SQL_BLOCK_RE.search(completion):
+            skipped += 1
+            continue
+        if completion.count("<think>") > 1:
+            skipped += 1
+            continue
         out.append({"question": question, "ddl": ddl, "completion": completion})
     if skipped:
         print(f"  distilled: {len(out)} kept, {skipped} skipped")
@@ -168,8 +183,17 @@ def main() -> int:
     ap.add_argument("--gold-frac", type=float, default=0.15,
                     help="gold fraction of the final mix (approved D1 = 0.15)")
     ap.add_argument("--max-distilled", type=int, default=0, help="0 = all")
+    ap.add_argument("--tokenizer-path",
+                    default="/gpfs/work/aac/jiahuiwang24/reasoning_generator_3b/"
+                            "models/Qwen2.5-Coder-3B-Instruct")
     ap.add_argument("--output", default=str(PROJECT / "data" / "sft_phase1_mix.json"))
     args = ap.parse_args()
+
+    if not _HAS_TOKENIZER:
+        print("ERROR: transformers not available for prompt truncation")
+        return 1
+    tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_path,
+                                              local_files_only=True)
 
     loader = SpiderLoader(args.spider_dir)
     train_items = load_train_items(args.spider_dir)
@@ -184,10 +208,15 @@ def main() -> int:
           f"gold_mixed={n_gold} ({args.gold_frac:.0%} of mix)")
 
     records = []
+    truncated = 0
     for rec in distilled:
-        records.append(build_messages(rec))
+        msgs, was_trunc = build_messages(rec, tokenizer)
+        truncated += 1 if was_trunc else 0
+        records.append(msgs)
     for rec in gold[:n_gold]:
-        records.append(build_messages(rec))
+        records.append(build_messages(rec, tokenizer)[0])
+    if truncated:
+        print(f"  prompt 截断到 {MAX_PROMPT_TOKENS} token: {truncated} 条")
 
     out_path = Path(args.output)
     out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -197,13 +226,36 @@ def main() -> int:
     return 0
 
 
-def build_messages(rec: Dict[str, str]) -> Dict[str, Any]:
+def truncate_user_prompt(user: str, tokenizer: Any,
+                         max_prompt_tokens: int = MAX_PROMPT_TOKENS) -> str:
+    """把 user 内容截断到模板化后 <= max_prompt_tokens, 与推理端窗口一致。"""
+    def templated_len(content: str) -> int:
+        ids = tokenizer.apply_chat_template(
+            [{"role": "user", "content": content}],
+            tokenize=True, add_generation_prompt=True)
+        return len(ids)
+
+    if templated_len(user) <= max_prompt_tokens:
+        return user
+    lo, hi = 0, len(user)
+    while lo < hi:
+        mid = (lo + hi) // 2
+        if templated_len(user[:mid]) <= max_prompt_tokens:
+            lo = mid + 1
+        else:
+            hi = mid
+    return user[: max(0, lo - 1)].rstrip()
+
+
+def build_messages(rec: Dict[str, str], tokenizer: Any) -> tuple:
+    """Return (messages_dict, was_truncated)."""
     user = ReasoningGeneratorAgent.build_prompt(
         question=rec["question"], ddl_schema=rec["ddl"])
-    return {"messages": [
-        {"role": "user", "content": user},
+    truncated_user = truncate_user_prompt(user, tokenizer)
+    return ({"messages": [
+        {"role": "user", "content": truncated_user},
         {"role": "assistant", "content": rec["completion"]},
-    ]}
+    ]}, truncated_user != user)
 
 
 if __name__ == "__main__":

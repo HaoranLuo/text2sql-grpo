@@ -121,8 +121,10 @@ def main():
             max_length=2048,
         )
 
-    tokenized_dataset = dataset.map(
-        tokenize_fn, remove_columns=["messages", "text"])
+    # P0 修复(监管审查): 只删除实际存在的列, 否则纯 messages 数据会因
+    # "Column to remove ['text'] not in the dataset" 直接崩溃
+    drop_cols = [c for c in ("messages", "text") if c in dataset.column_names]
+    tokenized_dataset = dataset.map(tokenize_fn, remove_columns=drop_cols)
 
     eval_dataset = None
     if args.eval_split > 0 and len(tokenized_dataset) >= 20:
