@@ -7,7 +7,7 @@ from collections import Counter
 
 base = "/gpfs/work/aac/jiahuiwang24/reasoning_generator_3b/data/spider_data"
 dev = json.load(open(f"{base}/dev.json"))
-pred = open(f"{base}/../reasoning_generator_3b/outputs/official_original_vav/pred.sql").read().splitlines()
+pred = open("/gpfs/work/aac/jiahuiwang24/reasoning_generator_3b/outputs/official_original_vav/pred.sql").read().splitlines()
 
 errs = Counter()
 for p, d in zip(pred, dev):
