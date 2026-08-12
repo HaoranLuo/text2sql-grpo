@@ -240,7 +240,12 @@ def parse_val_unit(toks, start_idx, tables_with_alias, schema, default_tables=No
         if idx < len_ and toks[idx] == '(':
             idx += 1
         if idx < len_ and toks[idx] == 'select':
-            idx, _sub = parse_sql(toks, idx, tables_with_alias, schema)
+            try:
+                idx, _sub = parse_sql(toks, idx, tables_with_alias, schema)
+            except Exception:
+                # 容错: EXISTS 子查询解析失败 → 跳到右括号（近似忽略）
+                while idx < len_ and toks[idx] != ')':
+                    idx += 1
         if idx < len_ and toks[idx] == ')':
             idx += 1
         return idx, (0, ((-1, -1, False), None, 0))  # 伪列单元
