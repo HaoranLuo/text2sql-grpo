@@ -14,13 +14,15 @@ mkdir -p "$OUT"
 # 1. 从 items.json 提取预测 + 对齐 gold 子集（官方格式: 每行 SQL，pred 每行一条）
 #    按 dataset_index 精确对齐；parse 失败的空预测跳过（pred/gold 同步）
 $PYTHON -c "
-import json, sys
+import json, re, sys
 items = json.load(open('$ITEMS'))
 dev = json.load(open('$SPIDER/dev.json'))
 
 pred_lines, gold_lines = [], []
 for it in items:
     sql = (it.get('predicted_sql') or '').strip().rstrip(';')
+    # P0 修复(T0.4): 先去掉 -- 行注释再折叠, 否则折叠后注释吞掉整条 SQL
+    sql = re.sub(r'^\s*--.*$', '', sql, flags=re.MULTILINE)
     sql = ' '.join(sql.split())  # 折叠空白为单空格
     if not sql:
         continue  # parse 失败 → 跳过（同步跳过 gold）
