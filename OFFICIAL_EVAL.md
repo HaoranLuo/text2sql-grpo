@@ -62,3 +62,13 @@
 bash scripts/eval_official.sh outputs/eval_rev_X/items.json outputs/official_X
 # 需要: test-suite 多实例数据库 (data/spider_data/database)、nltk punkt、sqlparse
 ```
+
+## 原始口径评估（2026-08-13，解析 100% 修复后）
+
+| 指标 | 修复前 | 修复后 | 论文 |
+|------|:---:|:---:|:---:|
+| 解析失败率 | 53.9% | **0%** | — |
+| exec（全量 1034） | 40.9% | **79.1%** | 85.0% |
+| 难度 easy/med/hard/extra | — | 92.3/80.7/72.4/62.0 | 94.8/90.1/78.2/64.5 |
+
+**意义**：评估链完全打通（解析 100%），差距 5.9pp 归因于预测质量 + 评估器细节（论文用 MAC-SQL evaluation_spider.py，我们用 taoyds 原版+补丁）。待办：获取 MAC-SQL 评估器进一步对齐。
