@@ -506,7 +506,11 @@ def evaluate(gold, predict, db_dir, etype, kmaps):
         db_name = db
         db = os.path.join(db_dir, db, db + ".sqlite")
         schema = Schema(get_schema(db))
-        g_sql = get_sql(schema, g_str)
+        try:
+            g_sql = get_sql(schema, g_str)
+        except Exception:
+            # FIX: gold 解析失败 → 跳过该题（不崩整体）
+            continue
         hardness = evaluator.eval_hardness(g_sql)
         scores[hardness]['count'] += 1
         scores['all']['count'] += 1
