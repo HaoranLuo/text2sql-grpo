@@ -23,6 +23,7 @@ from __future__ import print_function
 import os, sys
 import json
 import sqlite3
+sqlite3.text_factory = lambda b: b.decode('utf-8', errors='replace')  # FIX: Latin-1 兼容
 import traceback
 import argparse
 
