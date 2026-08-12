@@ -263,6 +263,10 @@ def parse_table_unit(toks, start_idx, tables_with_alias, schema):
         idx += 3
     else:
         idx += 1
+        # FIX: 隐式表别名（FROM singer s）——下一个 token 非关键词时视为别名
+        if idx < len_ and toks[idx] not in CLAUSE_KEYWORDS and toks[idx] not in (",", ")", ";"):
+            tables_with_alias[toks[idx]] = key  # 注册别名 → 表名
+            idx += 1
 
     return idx, schema.idMap[key], key
 
@@ -357,6 +361,9 @@ def parse_select(toks, start_idx, tables_with_alias, schema, default_tables=None
             idx += 1
         idx, val_unit = parse_val_unit(toks, idx, tables_with_alias, schema, default_tables)
         val_units.append((agg_id, val_unit))
+        # FIX: 跳过 AS 别名（模型生成的 SQL 常用 AS，官方解析器不支持）
+        if idx < len_ and toks[idx].lower() == 'as':
+            idx += 2  # skip 'as' + alias_name
         if idx < len_ and toks[idx] == ',':
             idx += 1  # skip ','
 
