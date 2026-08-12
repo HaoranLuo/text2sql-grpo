@@ -240,7 +240,7 @@ def parse_val_unit(toks, start_idx, tables_with_alias, schema, default_tables=No
         if idx < len_ and toks[idx] == '(':
             idx += 1
         if idx < len_ and toks[idx] == 'select':
-            idx, _sub = parse_sql(toks, idx, tables_with_alias, schema, default_tables)
+            idx, _sub = parse_sql(toks, idx, tables_with_alias, schema)
         if idx < len_ and toks[idx] == ')':
             idx += 1
         return idx, (0, ((-1, -1, False), None, 0))  # 伪列单元
