@@ -234,6 +234,21 @@ def parse_val_unit(toks, start_idx, tables_with_alias, schema, default_tables=No
         isBlock = True
         idx += 1
 
+    # FIX: CAST(col AS type) —— 当作普通列单元解析
+    if idx < len_ and toks[idx].lower() == 'cast':
+        idx += 1
+        if idx < len_ and toks[idx] == '(':
+            idx += 1
+        idx, col_id = parse_col(toks, idx, tables_with_alias, schema, default_tables)
+        while idx < len_ and toks[idx] not in (',', ')', 'from', 'where',
+                                               'group', 'order', 'having', 'limit'):
+            idx += 1  # 跳过 AS type
+        if idx < len_ and toks[idx] == ')':
+            idx += 1
+        col_unit1 = (0, col_id, False)  # none agg
+        unit_op = UNIT_OPS.index('none')
+        return idx, (unit_op, col_unit1, None)
+
     col_unit1 = None
     col_unit2 = None
     unit_op = UNIT_OPS.index('none')
@@ -392,6 +407,8 @@ def parse_from(toks, start_idx, tables_with_alias, schema):
             idx, sql = parse_sql(toks, idx, tables_with_alias, schema)
             table_units.append((TABLE_TYPE['sql'], sql))
         else:
+            if idx < len_ and toks[idx] in ('left', 'right', 'full', 'cross', 'inner', 'outer'):
+                idx += 1  # skip join 变体前缀 (left/right/full/...)
             if idx < len_ and toks[idx] == 'join':
                 idx += 1  # skip join
             idx, table_unit, table_name = parse_table_unit(toks, idx, tables_with_alias, schema)
