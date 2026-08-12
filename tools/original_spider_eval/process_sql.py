@@ -326,11 +326,13 @@ def parse_condition(toks, start_idx, tables_with_alias, schema, default_tables=N
     conds = []
 
     while idx < len_:
-        idx, val_unit = parse_val_unit(toks, idx, tables_with_alias, schema, default_tables)
+        # FIX: NOT 前置（NOT EXISTS / NOT IN / NOT LIKE）——先于 val_unit 解析
         not_op = False
         if toks[idx] == 'not':
             not_op = True
             idx += 1
+
+        idx, val_unit = parse_val_unit(toks, idx, tables_with_alias, schema, default_tables)
 
         assert idx < len_ and toks[idx] in WHERE_OPS, "Error condition: idx: {}, tok: {}".format(idx, toks[idx])
         op_id = WHERE_OPS.index(toks[idx])
