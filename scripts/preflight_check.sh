@@ -90,7 +90,9 @@ echo "[6/10] batch 整除 num_generations"
 BS=$(grep -oP 'per_device_train_batch_size=\K[^,]+' $BASE/src/train_reasoning_grpo.py)
 NG=$(grep -oP 'num_generations=args.num_generations|num_generations=\K\d+' $BASE/src/train_reasoning_grpo.py)
 # batch size 由 args.num_generations 决定，检查脚本参数
-if grep -q 'per_device_train_batch_size=args.num_generations' $BASE/src/train_reasoning_grpo.py; then
+if [ "${PREFLIGHT_MODE:-grpo}" == "sft" ]; then
+    check "batch 整除 num_generations" OK "SFT 作业不适用, 跳过"
+elif grep -q 'per_device_train_batch_size=args.num_generations' $BASE/src/train_reasoning_grpo.py; then
     check "batch=num_generations (自动整除)" OK ""
 else
     check "batch 整除 num_generations" WARN "手动设置需确认整除"
@@ -217,10 +219,14 @@ fi
 # ------------------------------------------------------------
 echo "[14/16] checkpoint 冲突检查 (防重复跑)"
 # ------------------------------------------------------------
-if [ -d "$BASE/checkpoints/grpo_7b_500d" ] && [ -f "$BASE/outputs/grpo_7b_500d/summary.json" ]; then
-    check "已有相同实验输出" WARN "grpo_7b_500d 已存在 — 确认是否覆盖重跑"
+EXP="${PREFLIGHT_EXP:-grpo_7b_500d}"   # 实验名经环境变量传入, 默认保持旧行为
+CONFLICT=0
+[ -d "$BASE/checkpoints/$EXP" ] && CONFLICT=1
+ls "$BASE"/outputs/eval_${EXP}*/summary.json >/dev/null 2>&1 && CONFLICT=1
+if [ $CONFLICT -eq 1 ]; then
+    check "已有相同实验输出" WARN "$EXP 已存在 — 确认是否覆盖重跑"
 else
-    check "无 checkpoint 冲突" OK ""
+    check "无 checkpoint 冲突 ($EXP)" OK ""
 fi
 
 # ------------------------------------------------------------
