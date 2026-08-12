@@ -300,8 +300,12 @@ WSL 侧由 `_wsl_hpc_phase1/2.sh` 从 `/mnt/c/Users/13389/.ssh` 复制密钥并 
   - 4 项修复全部执行（原始评估器 taoyds 版+补丁 / --etype exec / 原始单实例库 / 空预测 SELECT 1）
   - **解析器大修：557 → 0 解析失败**（15 类模式、13+ 补丁，workflow wuc9nvg2v 完成，含回归验证）
   - **重评结果：原始口径 exec = 79.1%**（40.9% → 79.1%；论文 85.0%，差 5.9pp 归因预测质量+评估器细节）
-  - 待办：获取 MAC-SQL evaluation_spider.py（论文所用）进一步对齐（可能 +3-5pp）；三口径对照表 85.88/85.0/76.6 + 口径说明段（论文写作用）
-- **随后**：P0 #1 推理蒸馏→SFT（蒸馏数据 1000 条已生成就绪，随时可提交训练）→ 数据卫生 P0 #3 → L2 MPEV 官方口径验证 → L1 技术报告。
+  - MAC-SQL evaluation_spider.py 已获取（.research_tmp/mac_sql/，差异定位：exec 行序不敏感/列序可置换 → +3-5pp 来源确认）；三口径对照表 85.88/85.0/76.6 + 口径说明段（论文写作用）
+- **2026-08-13 执行进展（ORCHESTRATION_PLAN v1.2 全力执行中）**：
+  - Phase 0 全部完成：数据卫生三不相交划分（GRPO 5.5k/SFT-gold 1.5k/池 1.65k，sha256+对抗验证 PASS）、MPEV 官方 65% 归因（多实例口径+4 管线 bug，eval_official.sh 注释折叠 P0 已修）、SFT 配方 D1 落地（r32/lr1e-5/3ep/dev 早停/chat 格式）+ 混合数据 1176 条已生成、preflight 全绿
+  - 文献弹药库：docs/research_track_20260813.md（9 项可落地实验，已并入 ORCHESTRATION_PLAN §七）
+  - 进行中：Phase 1 SFT 提交前监管审查（4 审查员 workflow）；D5 账单实测备好待提交
+- **随后**：P0 #1 蒸馏→SFT（数据就绪，监管 GO 即提交）→ L2 MPEV 官方口径验证（按归因修复）→ L1 技术报告。
 - **深度路线（2026-08-13 确定，见 PAPER_PLAN §七）**：L4（改进论文）→ **L7 机制理论**（用现有数据、0 新 GPU、优先于 L6）→ L8 跨任务范式（Gate-4 决定）；L9 开源随时可并行。GPU 预算：L4 ~3 天 / L5 ~2 天 / L7 0 新实验 / L8 4-6 月（可选）。
 
 ---
@@ -360,6 +364,7 @@ WSL 侧由 `_wsl_hpc_phase1/2.sh` 从 `/mnt/c/Users/13389/.ssh` 复制密钥并 
 - **P2 #9 Qwen3 基座 A/B**：30B-A3B（MoE 3.3B 激活）推理线 + 4B-Base 训练线，先零训练 A/B 再决定 fork，**严禁通用 Qwen3-8B**。
 - **P2 #10 ORM 验证器替换启发式投票**（GradeSQL/STaR-SQL 路线，7B 验证器+3B 生成器）。
 - 其他：BIRD 迁移（下月，前置 SAR-Agent 标注筛查）、迭代蒸馏（2 轮封顶，仅对照）、多视角投票并入 #5。
+- **文献弹药（2026-08-13 新增）**：9 项备选实验（QAE 基线/奖励栈 v2/投票失败曲线/memory 质心过滤/few-shot 变体/OOD 体检等）已并入 ORCHESTRATION_PLAN §七 与 docs/research_track_20260813.md；执行优先级：零训练推理项 > 训练消融项；决策点 D8。
 
 ### 9.2 明确不做 / 延后
 
