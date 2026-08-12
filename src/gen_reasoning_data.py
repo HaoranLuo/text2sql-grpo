@@ -462,6 +462,7 @@ def main() -> int:
         Path(args.spider_dir).parent / "reasoning_data"
         / f"{args.model}_spider_train_think.jsonl"
     )
+    output_path.parent.mkdir(parents=True, exist_ok=True)  # FIX: 确保输出目录存在
 
     # --- DDL for every requested db (fail fast before any API spend) -------
     loader = SpiderLoader(args.spider_dir)
