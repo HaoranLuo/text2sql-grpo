@@ -100,7 +100,8 @@ def extract_sql(text: str) -> str:
 # Dataset builder
 # ===================================================================
 
-def build_dataset(spider_dir: str, limit: int = 100, filter_gold: bool = False) -> Dataset:
+def build_dataset(spider_dir: str, limit: int = 100, filter_gold: bool = False,
+                  train_file: str = None) -> Dataset:
     """Build a HuggingFace Dataset from Spider train data.
 
     Each row contains:
@@ -115,7 +116,7 @@ def build_dataset(spider_dir: str, limit: int = 100, filter_gold: bool = False) 
     """
     loader = SpiderLoader(spider_dir)
 
-    train_path = Path(spider_dir) / "train_spider.json"
+    train_path = Path(train_file) if train_file else (Path(spider_dir) / "train_spider.json")
     if not train_path.exists():
         raise FileNotFoundError(f"Training data not found: {train_path}")
 
@@ -435,6 +436,12 @@ def main() -> None:
         help="Root of Spider dataset",
     )
     parser.add_argument(
+        "--train-file", type=str, default=None,
+        help="训练数据 JSON 路径(默认 spider_dir/train_spider.json);"
+             "数据卫生 G3: GRPO 训练必须用 GRPO-manifest 子集文件, "
+             "不能直接取 train_spider 前 N 条(与 SFT-gold 重叠)",
+    )
+    parser.add_argument(
         "--model-path", type=str, default=str(MODEL_PATH),
         help="Path to local model",
     )
@@ -469,7 +476,8 @@ def main() -> None:
     # ------------------------------------------------------------------
     print(f"Building dataset from: {spider_dir}")
     dataset = build_dataset(spider_dir, limit=args.num_train,
-                            filter_gold=args.filter_gold)
+                            filter_gold=args.filter_gold,
+                            train_file=args.train_file)
     print(f"Dataset: {len(dataset)} examples")
     print(f"First prompt length: {len(dataset[0]['prompt'])} chars")
     print(f"First db_id: {dataset[0]['db_id']}")

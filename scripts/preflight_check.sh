@@ -92,8 +92,8 @@ NG=$(grep -oP 'num_generations=args.num_generations|num_generations=\K\d+' $BASE
 # batch size 由 args.num_generations 决定，检查脚本参数
 if [ "${PREFLIGHT_MODE:-grpo}" == "sft" ]; then
     check "batch 整除 num_generations" OK "SFT 作业不适用, 跳过"
-elif grep -q 'per_device_train_batch_size=args.num_generations' $BASE/src/train_reasoning_grpo.py; then
-    check "batch=num_generations (自动整除)" OK ""
+elif grep -qE 'per_device_train_batch_size=.*args\.num_generations|args\.num_generations \* 4' $BASE/src/train_reasoning_grpo.py; then
+    check "batch=k*num_generations (自动整除)" OK ""
 else
     check "batch 整除 num_generations" WARN "手动设置需确认整除"
 fi
