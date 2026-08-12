@@ -234,6 +234,17 @@ def parse_val_unit(toks, start_idx, tables_with_alias, schema, default_tables=No
         isBlock = True
         idx += 1
 
+    # FIX: EXISTS (SELECT ...) —— 伪列单元（列 -1，eval 层跳过该列比较）
+    if idx < len_ and toks[idx].lower() == 'exists':
+        idx += 1
+        if idx < len_ and toks[idx] == '(':
+            idx += 1
+        if idx < len_ and toks[idx] == 'select':
+            idx, _sub = parse_sql(toks, idx, tables_with_alias, schema, default_tables)
+        if idx < len_ and toks[idx] == ')':
+            idx += 1
+        return idx, (0, ((-1, -1, False), None, 0))  # 伪列单元
+
     # FIX: CAST(col AS type) —— 当作普通列单元解析
     if idx < len_ and toks[idx].lower() == 'cast':
         idx += 1

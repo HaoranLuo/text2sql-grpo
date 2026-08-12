@@ -633,6 +633,9 @@ def eval_exec_match(db, p_str, g_str, pred, gold):
     def res_map(res, val_units):
         rmap = {}
         for idx, val_unit in enumerate(val_units):
+            # FIX: EXISTS 伪列（-1）跳过比较
+            if val_unit[1] == -1:
+                continue
             key = tuple(val_unit[1]) if not val_unit[2] else (val_unit[0], tuple(val_unit[1]), tuple(val_unit[2]))
             rmap[key] = [r[idx] for r in res]
         return rmap
