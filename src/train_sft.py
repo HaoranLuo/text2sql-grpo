@@ -18,13 +18,14 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, Trainer, TrainingA
 from peft import LoraConfig, get_peft_model
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-MODEL_PATH = PROJECT_ROOT / "models" / "qwen2.5-coder-7b-instruct"
+MODEL_PATH = PROJECT_ROOT / "models" / "Qwen2.5-Coder-3B-Instruct"
 
 
 def build_sft_dataset(data_path: str) -> Dataset:
     """Convert training data to simple text format.
 
-    Supports two input schemas:
+    Supports three input schemas:
+    - {"messages": [{"role": "user"/"assistant", ...}]}  (chat-format, eval-consistent)
     - {"text": "full prompt+completion"}  (pre-built)
     - {"ddl": ..., "question": ..., "api_response": ...}  (legacy API format)
     """
@@ -33,8 +34,11 @@ def build_sft_dataset(data_path: str) -> Dataset:
 
     records: List[Dict] = []
     for item in data:
-        if "text" in item:
+        if "messages" in item:
+            records.append({"messages": item["messages"]})
+        elif "text" in item:
             text = item["text"]
+            records.append({"text": text})
         else:
             prompt = (
                 f"You are an expert Text-to-SQL assistant. "
@@ -44,9 +48,9 @@ def build_sft_dataset(data_path: str) -> Dataset:
                 f"Question: {item['question']}\n\n"
                 f"Answer:"
             )
-            completion = item["api_response"]
+            completion = item.get("api_response") or item.get("response") or ""
             text = prompt + "\n" + completion
-        records.append({"text": text})
+            records.append({"text": text})
 
     print(f"Built SFT dataset: {len(records)} examples")
     return Dataset.from_list(records)
@@ -57,9 +61,13 @@ def main():
     parser.add_argument("--data", required=True, help="API-generated data JSON")
     parser.add_argument("--output", required=True, help="Output dir for SFT model")
     parser.add_argument("--model-path", default=str(MODEL_PATH))
-    parser.add_argument("--epochs", type=int, default=2)
+    parser.add_argument("--epochs", type=int, default=3)
     parser.add_argument("--batch-size", type=int, default=1)
-    parser.add_argument("--lr", type=float, default=2e-5)
+    parser.add_argument("--lr", type=float, default=1e-5)
+    parser.add_argument("--lora-r", type=int, default=32)
+    parser.add_argument("--lora-alpha", type=int, default=64)
+    parser.add_argument("--eval-split", type=float, default=0.05,
+                        help="dev split fraction for early stopping (0 = disable)")
     args = parser.parse_args()
 
     torch.backends.cuda.matmul.allow_tf32 = True
@@ -84,8 +92,8 @@ def main():
     dataset = build_sft_dataset(args.data)
 
     lora_config = LoraConfig(
-        r=16,
-        lora_alpha=32,
+        r=args.lora_r,
+        lora_alpha=args.lora_alpha,
         target_modules=["q_proj", "k_proj", "v_proj", "o_proj",
                         "gate_proj", "up_proj", "down_proj"],
         lora_dropout=0.05,
@@ -97,16 +105,34 @@ def main():
     model = get_peft_model(model, lora_config)
     model.print_trainable_parameters()
 
-    # Tokenize dataset
-    def tokenize_fn(examples):
+    # Tokenize dataset (chat messages via apply_chat_template = eval-consistent)
+    def tokenize_fn(example):
+        if "messages" in example:
+            return tokenizer.apply_chat_template(
+                example["messages"],
+                tokenize=True,
+                truncation=True,
+                max_length=2048,
+            )
         return tokenizer(
-            examples["text"],
+            example["text"],
             truncation=True,
-            padding=True,
+            padding=False,
             max_length=2048,
         )
 
-    tokenized_dataset = dataset.map(tokenize_fn, batched=True, remove_columns=["text"])
+    tokenized_dataset = dataset.map(
+        tokenize_fn, remove_columns=["messages", "text"])
+
+    eval_dataset = None
+    if args.eval_split > 0 and len(tokenized_dataset) >= 20:
+        split = tokenized_dataset.train_test_split(
+            test_size=args.eval_split, seed=42)
+        train_dataset, eval_dataset = split["train"], split["test"]
+        print(f"Dev split: train={len(train_dataset)} eval={len(eval_dataset)}")
+    else:
+        train_dataset = tokenized_dataset
+        print(f"No dev split ({len(tokenized_dataset)} examples)")
 
     data_collator = DataCollatorForLanguageModeling(
         tokenizer=tokenizer,
@@ -120,7 +146,11 @@ def main():
         gradient_accumulation_steps=4,
         learning_rate=args.lr,
         logging_steps=10,
-        save_strategy="no",
+        eval_strategy="epoch" if eval_dataset is not None else "no",
+        save_strategy="epoch" if eval_dataset is not None else "no",
+        load_best_model_at_end=eval_dataset is not None,
+        metric_for_best_model="eval_loss",
+        save_total_limit=2,
         bf16=True,
         report_to="none",
         dataloader_num_workers=0,
@@ -130,7 +160,8 @@ def main():
     trainer = Trainer(
         model=model,
         args=training_args,
-        train_dataset=tokenized_dataset,
+        train_dataset=train_dataset,
+        eval_dataset=eval_dataset,
         data_collator=data_collator,
     )
 
