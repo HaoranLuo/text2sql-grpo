@@ -108,12 +108,15 @@ def main():
     # Tokenize dataset (chat messages via apply_chat_template = eval-consistent)
     def tokenize_fn(example):
         if "messages" in example:
-            return tokenizer.apply_chat_template(
+            # return_dict=True 必须: 默认返回 list, datasets map 会抛 TypeError
+            enc = tokenizer.apply_chat_template(
                 example["messages"],
                 tokenize=True,
+                return_dict=True,
                 truncation=True,
                 max_length=2048,
             )
+            return dict(enc)
         return tokenizer(
             example["text"],
             truncation=True,
