@@ -248,7 +248,7 @@ def parse_val_unit(toks, start_idx, tables_with_alias, schema, default_tables=No
                     idx += 1
         if idx < len_ and toks[idx] == ')':
             idx += 1
-        return idx, (0, ((-1, -1, False), None, 0))  # 伪列单元
+        return idx, (0, (-1, -1, False), None)  # 伪列单元 (unit_op, col_unit1, col_unit2)
 
     # FIX: CAST(col AS type) —— 当作普通列单元解析
     if idx < len_ and toks[idx].lower() == 'cast':
