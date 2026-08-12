@@ -20,9 +20,33 @@ from typing import Any, Dict, List
 
 import torch
 from datasets import Dataset
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer, TrainerCallback
 from peft import LoraConfig
 from trl import GRPOConfig, GRPOTrainer
+
+
+class RewardStdGuardCallback(TrainerCallback):
+    """P1 守卫(监管审查): reward_std 连续 N 次为 0 = 无学习信号(梯度退化),
+    提前停止训练, 防止静默白跑完整步数 + 后续白评估。"""
+
+    def __init__(self, patience: int = 3):
+        self.patience = patience
+        self.zero_streak = 0
+
+    def on_log(self, args, state, control, logs=None, **kwargs):
+        if not logs:
+            return
+        std = logs.get("reward_std")
+        if std is None:
+            return
+        if std == 0:
+            self.zero_streak += 1
+            print(f"[RewardStdGuard] reward_std=0 连续 {self.zero_streak}/{self.patience} 次")
+            if self.zero_streak >= self.patience:
+                print("[RewardStdGuard] 无学习信号(梯度退化), 提前停止训练!")
+                control.should_training_stop = True
+        else:
+            self.zero_streak = 0
 
 # ---------------------------------------------------------------------------
 # Our own utilities — reuse spider_utils, do NOT rewrite.
@@ -597,6 +621,7 @@ def main() -> None:
         train_dataset=dataset,
         processing_class=tokenizer,
         peft_config=lora_config,
+        callbacks=[RewardStdGuardCallback()],
     )
 
     print("\n" + "=" * 60)
