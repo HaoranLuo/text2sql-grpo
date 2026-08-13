@@ -92,13 +92,14 @@ DEFAULT_SPIDER_DIR = (
     "/gpfs/work/aac/jiahuiwang24/reasoning_generator_3b/data/spider_data"
 )
 DEFAULT_BASE_URL = "https://api.deepseek.com"
-MODEL_CHOICES = ("deepseek-chat", "deepseek-reasoner")
+# 2026-07-24 起旧别名 deepseek-chat/deepseek-reasoner 已弃用, 仅剩这两个(均支持思考模式, 默认开)
+MODEL_CHOICES = ("deepseek-v4-flash", "deepseek-v4-pro")
 
-# DeepSeek pricing, USD per 1M tokens (standard price, cache-miss default).
-# Prices change - verify at https://api-docs.deepseek.com/quick_start/pricing
+# DeepSeek pricing, USD per 1M tokens (2026-08 现行, 经 GET /models + 官方页核实;
+# 峰谷分时计费未生效, 官方公告计划涨价, 每次跑前以官方定价页为准)
 PRICING_USD_PER_M: Dict[str, Dict[str, float]] = {
-    "deepseek-chat": {"input_miss": 0.27, "input_hit": 0.07, "output": 1.10},
-    "deepseek-reasoner": {"input_miss": 0.55, "input_hit": 0.14, "output": 2.19},
+    "deepseek-v4-flash": {"input_miss": 0.14, "input_hit": 0.0028, "output": 0.28},
+    "deepseek-v4-pro": {"input_miss": 0.435, "input_hit": 0.003625, "output": 0.87},
 }
 ASSUMED_AVG_OUTPUT_TOKENS = 600  # used by the pre-run cost estimate only
 
