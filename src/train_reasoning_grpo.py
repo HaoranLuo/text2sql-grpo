@@ -470,6 +470,15 @@ def main() -> None:
         help="Path to local model",
     )
     parser.add_argument(
+        "--loss-type", type=str, default="grpo", choices=["grpo", "dapo"],
+        help="TRL 0.17+: dapo = 归一化优势(零优势组过滤, 文献最大单项修复)",
+    )
+    parser.add_argument(
+        "--scale-rewards", type=str, default="group",
+        choices=["group", "batch", "none"],
+        help="优势缩放: group=组内std缩放(默认) / batch=批级 / none=不缩放(Dr.GRPO建议)",
+    )
+    parser.add_argument(
         "--reward-type", type=str, default="three_level",
         choices=["binary", "three_level", "partial", "atomic", "finer"],
         help="Reward function: binary (0/1), three_level (1.0/0.1/0.0), "
@@ -587,6 +596,9 @@ def main() -> None:
         max_completion_length=512,  # MUST match inference max_new_tokens (512)
         temperature=args.temperature,
         beta=args.beta,
+        loss_type=args.loss_type,       # T2.3: dapo = normed advantages(零优势组过滤)
+        scale_rewards=(None if args.scale_rewards == "none"
+                       else args.scale_rewards),  # T2.3: none = 去组std缩放
         remove_unused_columns=False,   # CRITICAL: keep query, db_id for reward
         bf16=True,
         dataloader_num_workers=2,   # parallelize reward computation
