@@ -109,8 +109,9 @@ print(f'  torch={torch.__version__} transformers={transformers.__version__} trl=
 # ------------------------------------------------------------
 echo "[8/10] SLURM 分区有效性"
 # ------------------------------------------------------------
-PART=$(grep -oP '(?<=--partition=)\S+' $BASE/scripts/train_grpo.slurm | head -1)
-QOS=$(grep -oP '(?<=--qos=)\S+' $BASE/scripts/train_grpo.slurm | head -1)
+SLURM_FILE="${PREFLIGHT_SLURM:-$BASE/scripts/train_grpo.slurm}"
+PART=$(grep -oP '(?<=--partition=)\S+' "$SLURM_FILE" | head -1)
+QOS=$(grep -oP '(?<=--qos=)\S+' "$SLURM_FILE" | head -1)
 if sinfo -p "$PART" >/dev/null 2>&1; then
     check "分区 $PART 存在" OK ""
 else
@@ -230,7 +231,7 @@ else
 fi
 
 # ------------------------------------------------------------
-echo "[15/16] TRL API 签名检查 (版本变动)"
+echo "[15/16] TRL API 签名 + loss_type 路由检查 (版本变动)"
 # ------------------------------------------------------------
 $PYTHON -c "
 from trl import GRPOTrainer
@@ -239,7 +240,7 @@ params = list(inspect.signature(GRPOTrainer.__init__).parameters.keys())
 required = ['reward_funcs', 'processing_class']
 missing = [p for p in required if p not in params]
 if not missing:
-    print('  [✅] TRL 0.15.2 API: reward_funcs + processing_class 存在')
+    print('  [✅] TRL API: reward_funcs + processing_class 存在')
 else:
     print('  [❌] TRL API 变动, 缺失: ' + str(missing))
     sys.exit(1)
@@ -247,6 +248,19 @@ else:
 if [ $? -ne 0 ]; then
     ERRORS=$((ERRORS+1))
     echo "  [❌] TRL API 签名检查失败"
+fi
+TRL_VER=$($PYTHON -c "import trl; print(trl.__version__)" 2>/dev/null)
+echo "  [ℹ️] 已装 TRL 版本: $TRL_VER"
+# loss_type 路由校验: 已装源码支持分支 vs 提交脚本请求值(防 dapo 类漏检, 监管 P0 教训)
+LOSS_BRANCHES=$(grep -oP 'self\.loss_type == "[a-z_0-9]+"' \
+    $BASE/envs/reasoning3b/lib/python3.10/site-packages/trl/trainer/grpo_trainer.py \
+    2>/dev/null | grep -oP '[a-z_0-9]+"$' | tr -d '"' | sort -u | tr '\n' ' ')
+REQ_LOSS=$(grep -oP '(?<=--loss-type )[a-z_0-9]+' "$SLURM_FILE" 2>/dev/null | head -1)
+if [ -z "$REQ_LOSS" ]; then REQ_LOSS="grpo"; fi
+if echo " $LOSS_BRANCHES " | grep -q " $REQ_LOSS "; then
+    check "loss_type=$REQ_LOSS 在已装 TRL 支持范围 ($(echo $LOSS_BRANCHES))" OK ""
+else
+    check "loss_type=$REQ_LOSS 不受已装 TRL 支持" ERROR "仅支持: $(echo $LOSS_BRANCHES) — 训练第一步必崩"
 fi
 
 # ------------------------------------------------------------

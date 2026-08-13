@@ -1,8 +1,9 @@
 #!/bin/bash
-# Phase 2 T2.3: GRPO finer + DAPO 加固(最后一搏, 文献全剂量可及部分)
-# T2.1 三级 -10pp / T2.2 finer -9pp → 本配方加: loss_type=dapo(归一化优势, 零优势组过滤)
-# + scale_rewards=none(去组std缩放, Dr.GRPO) + lr 2e-6→1e-6(更强锁SFT)
-# 残余(TRL 0.18 才有, 记录在案): clip-higher / token-mean loss
+# Phase 2 T2.3: GRPO finer + Dr.GRPO 加固(最后一搏)
+# T2.1 三级 -10pp / T2.2 finer -9pp → 本配方加: loss_type=dr_grpo(token-mean 去长度归一化,
+# Dr.GRPO 论文损失; 监管审查确认 TRL 0.17 支持) + scale_rewards=none(不缩放, bool 语义)
+# + lr 2e-6→1e-6(更强锁SFT); 零优势组靠 RewardStdGuard 兜底
+# 残余(TRL >=0.18 才有, 记录在案): dapo 零优势组过滤 / clip-higher
 #SBATCH --job-name=grpo_t23
 #SBATCH --partition=aiaca40
 #SBATCH --qos=1a40
@@ -33,7 +34,7 @@ $PYTHON $BASE/src/train_reasoning_grpo.py \
     --num-generations 4 \
     --max-steps 40 \
     --reward-type finer \
-    --loss-type dapo \
+    --loss-type dr_grpo \
     --scale-rewards none \
     --learning-rate 1e-6 \
     --beta 0.02 \

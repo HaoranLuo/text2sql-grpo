@@ -470,13 +470,15 @@ def main() -> None:
         help="Path to local model",
     )
     parser.add_argument(
-        "--loss-type", type=str, default="grpo", choices=["grpo", "dapo"],
-        help="TRL 0.17+: dapo = 归一化优势(零优势组过滤, 文献最大单项修复)",
+        "--loss-type", type=str, default="grpo",
+        choices=["grpo", "bnpo", "dr_grpo"],
+        help="TRL 0.17 实际支持: grpo / bnpo(默认) / dr_grpo(token-mean 去长度归一化, "
+             "Dr.GRPO 论文损失; dapo 需 TRL>=0.18, 升级前勿用)",
     )
     parser.add_argument(
-        "--scale-rewards", type=str, default="group",
-        choices=["group", "batch", "none"],
-        help="优势缩放: group=组内std缩放(默认) / batch=批级 / none=不缩放(Dr.GRPO建议)",
+        "--scale-rewards", type=str, default="default",
+        choices=["default", "none"],
+        help="优势缩放(TRL 0.17 为 bool 语义): default=组内std缩放(True) / none=不缩放(False, Dr.GRPO建议)",
     )
     parser.add_argument(
         "--reward-type", type=str, default="three_level",
@@ -596,9 +598,9 @@ def main() -> None:
         max_completion_length=512,  # MUST match inference max_new_tokens (512)
         temperature=args.temperature,
         beta=args.beta,
-        loss_type=args.loss_type,       # T2.3: dapo = normed advantages(零优势组过滤)
-        scale_rewards=(None if args.scale_rewards == "none"
-                       else args.scale_rewards),  # T2.3: none = 去组std缩放
+        loss_type=args.loss_type,       # T2.3: dr_grpo = token-mean 去长度归一化
+        scale_rewards=(False if args.scale_rewards == "none"
+                       else True),      # TRL 0.17 bool 语义: none=不缩放(Dr.GRPO)
         remove_unused_columns=False,   # CRITICAL: keep query, db_id for reward
         bf16=True,
         dataloader_num_workers=2,   # parallelize reward computation
