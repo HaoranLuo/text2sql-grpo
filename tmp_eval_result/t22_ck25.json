@@ -1,20 +1,20 @@
 {
   "total_requested": 1034,
   "total_completed": 1034,
-  "parse_success_count": 1029,
-  "parse_success_rate": 0.9952,
-  "prediction_execution_success_count": 868,
-  "prediction_execution_success_rate": 0.8395,
+  "parse_success_count": 1030,
+  "parse_success_rate": 0.9961,
+  "prediction_execution_success_count": 869,
+  "prediction_execution_success_rate": 0.8404,
   "gold_execution_success_count": 1024,
-  "custom_execution_match_count": 556,
-  "custom_execution_match_rate": 0.5377,
+  "custom_execution_match_count": 567,
+  "custom_execution_match_rate": 0.5484,
   "normalized_sql_string_match_count": 63,
   "normalized_sql_string_match_rate": 0.0609,
-  "average_generation_seconds": 3.4432,
-  "total_wall_seconds": 3569.18,
+  "average_generation_seconds": 3.6708,
+  "total_wall_seconds": 3804.58,
   "evaluator_type": "custom_execution_match",
   "is_official_spider_metric": false,
-  "generated_at": "2026-08-12T21:35:10.813929+00:00",
+  "generated_at": "2026-08-13T07:36:10.787321+00:00",
   "requested_indices": [
     0,
     1,
@@ -1053,5 +1053,5 @@
   ],
   "start_index": 0,
   "limit": 1034,
-  "lora_path": "/gpfs/work/aac/jiahuiwang24/reasoning_generator_3b/checkpoints/grpo_t21_sft3lvl/checkpoint-25"
+  "lora_path": "/gpfs/work/aac/jiahuiwang24/reasoning_generator_3b/checkpoints/grpo_t22_finer/checkpoint-25"
 }

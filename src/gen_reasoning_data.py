@@ -370,12 +370,12 @@ def estimate_input_tokens(items: List[Tuple[int, Dict[str, Any]]], ddl_map: Dict
 
 
 def estimate_usd(model: str, input_tokens: int, output_tokens: int) -> float:
-    p = PRICING_USD_PER_M.get(model, PRICING_USD_PER_M["deepseek-chat"])
+    p = PRICING_USD_PER_M.get(model, PRICING_USD_PER_M["deepseek-v4-flash"])
     return (input_tokens / 1e6) * p["input_miss"] + (output_tokens / 1e6) * p["output"]
 
 
 def compute_actual_cost(records: List[Dict[str, Any]], model: str) -> Tuple[float, int, int, int]:
-    p = PRICING_USD_PER_M.get(model, PRICING_USD_PER_M["deepseek-chat"])
+    p = PRICING_USD_PER_M.get(model, PRICING_USD_PER_M["deepseek-v4-flash"])
     in_hit = in_miss = out = 0
     for r in records:
         if not r.get("success"):
@@ -526,7 +526,7 @@ def main() -> int:
     est_input = estimate_input_tokens(pending, ddl_map, args.model)
     est_output = ASSUMED_AVG_OUTPUT_TOKENS * len(pending)
     est_cost = estimate_usd(args.model, est_input, est_output)
-    p = PRICING_USD_PER_M.get(args.model, PRICING_USD_PER_M["deepseek-chat"])
+    p = PRICING_USD_PER_M.get(args.model, PRICING_USD_PER_M["deepseek-v4-flash"])
     print(f"COST ESTIMATE (pre-run, worst-case cache miss):")
     print(f"  est input tokens : {est_input:,}  (assumed avg output {ASSUMED_AVG_OUTPUT_TOKENS}/item)")
     print(f"  est output tokens: {est_output:,}")
