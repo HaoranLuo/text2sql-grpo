@@ -109,9 +109,15 @@ print(f'  torch={torch.__version__} transformers={transformers.__version__} trl=
 # ------------------------------------------------------------
 echo "[8/10] SLURM 分区有效性"
 # ------------------------------------------------------------
-SLURM_FILE="${PREFLIGHT_SLURM:-$BASE/scripts/train_grpo.slurm}"
-PART=$(grep -oP '(?<=--partition=)\S+' "$SLURM_FILE" | head -1)
-QOS=$(grep -oP '(?<=--qos=)\S+' "$SLURM_FILE" | head -1)
+# P1 修复(监管复审): 必须显式指定要校验的 slurm 文件, 禁止静默回退到 stale 旧文件
+if [ -z "$PREFLIGHT_SLURM" ]; then
+    check "PREFLIGHT_SLURM 未设置" ERROR "必须显式传 PREFLIGHT_SLURM=<提交的slurm脚本>, 防止校验错文件"
+    SLURM_FILE="$BASE/scripts/NO_SUCH_FILE.slurm"
+else
+    SLURM_FILE="$PREFLIGHT_SLURM"
+fi
+PART=$(grep -oP '(?<=--partition=)\S+' "$SLURM_FILE" 2>/dev/null | head -1)
+QOS=$(grep -oP '(?<=--qos=)\S+' "$SLURM_FILE" 2>/dev/null | head -1)
 if sinfo -p "$PART" >/dev/null 2>&1; then
     check "分区 $PART 存在" OK ""
 else
