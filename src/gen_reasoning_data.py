@@ -200,9 +200,11 @@ async def call_deepseek(
         "messages": messages,
         "max_tokens": args.max_tokens,
         "timeout": args.timeout,
+        "temperature": args.temperature,
     }
-    if model != "deepseek-reasoner":
-        kwargs["temperature"] = args.temperature  # reasoner does not support it
+    if args.thinking == "disabled":
+        # V4 关闭思考: OpenAI 兼容格式用 extra_body(官方文档)
+        kwargs["extra_body"] = {"thinking": {"type": "disabled"}}
 
     last_error: Optional[Exception] = None
     for attempt in range(args.max_retries + 1):
@@ -414,14 +416,17 @@ def parse_args() -> argparse.Namespace:
     ap.add_argument("--output", default="",
                     help="output JSONL path (default: "
                          "<spider-dir>/../reasoning_data/<model>_spider_train_think.jsonl)")
-    ap.add_argument("--model", choices=MODEL_CHOICES, default="deepseek-chat")
+    ap.add_argument("--model", choices=MODEL_CHOICES, default="deepseek-v4-flash")
+    ap.add_argument("--thinking", choices=["enabled", "disabled"], default="enabled",
+                    help="思考模式(V4 默认开启; disabled 走 extra_body thinking.type=disabled, "
+                         "勿与 reasoning_effort 同传否则 400)")
     ap.add_argument("--api-key", default=None,
                     help="DeepSeek API key (default: env DEEPSEEK_API_KEY)")
     ap.add_argument("--base-url", default=DEFAULT_BASE_URL)
     ap.add_argument("--temperature", type=float, default=0.7,
-                    help="sampling temperature (ignored for deepseek-reasoner)")
-    ap.add_argument("--max-tokens", type=int, default=1500,
-                    help="max output tokens per call (reasoner needs >= 1024)")
+                    help="sampling temperature")
+    ap.add_argument("--max-tokens", type=int, default=4096,
+                    help="max output tokens per call(思考模式吃输出预算, 4096 防截断)")
     ap.add_argument("--concurrency", type=int, default=8,
                     help="number of concurrent API calls")
     ap.add_argument("--sleep", type=float, default=0.05,
