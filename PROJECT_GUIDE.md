@@ -80,6 +80,7 @@
 | 3b_1000条训练+1000条评估_ckpt50 | 53.9% | 子集偏难 -7.4pp；数据量无增益再次确认；50 步未过拟合（与 100 条实验不同） |
 | MPEV 多视角×采样投票_100条 | 训练同口径 **75%** | vs 原版多 prompt 70%，+5pp；vav_self 89%；官方 EX 65% 待分析（属 L0） |
 | **sft_phase1 蒸馏SFT（2026-08-13）** | 自定义 **63.9%** / 官方 **60.8%** | D1 配方（r32/lr1e-5/3ep/dev早停/gold15%）；**Gate G2 通过（≥55%）→ 进 GRPO**；对比 3B GRPO-三级旧版 54.2% 自定义（+9.7pp）；7B 基线官方 67.5%（差 6.7pp） |
+| **grpo_t21 三级从SFT起（2026-08-13，负结果）** | best 自定义 53.8% / 官方 **49.4%** | **回吐 SFT 增益 -10.2/-11.4pp**：三级稀疏奖励从强 SFT 起点致退化（exec/parse 双降）——验证文献"稠密奖励必要性"与历史 P7 梯度退化；**→ T2.2 四分量稠密奖励+梯度修复（对症药，文献已证 +4.4pp 路线）** |
 
 ### 2.5 外部模型对照（子集 100 条，仅供参考，非论文口径）
 
@@ -201,7 +202,7 @@ reasoning_generator_3b/
 ```
 Host gf-bastion
   HostName 6.tcp.cpolar.cn        # cpolar 公网隧道地址
-  Port 11220                      # ★当前有效端口（注意：_wsl_hpc_phase1/2.sh 里写的是 10444，已过时）
+  Port 10889                      # ★当前有效端口（2026-08-13 cpolar 重启后变更，旧 11220/10444 均过时）
   User ASUS
   IdentityFile ~/.ssh/id_ed25519
   StrictHostKeyChecking no
@@ -227,7 +228,7 @@ WSL 侧由 `_wsl_hpc_phase1/2.sh` 从 `/mnt/c/Users/13389/.ssh` 复制密钥并 
 | 故障 | 处理 |
 |---|---|
 | 隧道不稳定、连接时断 | ssh_hpc.ps1 自动重试 8×10s；config 全面 KeepAlive；WSL 侧加 ServerAlive/ConnectTimeout |
-| cpolar 地址/端口漂移（config=11220 vs 阶段脚本=10444） | **手动核对并同步两处**（无自动更新机制，未找到独立地址文件，地址硬编码在两处） |
+| cpolar 地址/端口漂移（2026-08-13: 11220→10889） | 手动同步 config+WSL 脚本两处；**堡垒机新增防断措施**（开机自启/30s 自动重连/永不休眠），当前地址自动写入堡垒机 C:\SSHRemote\current_tunnel.txt，恢复时先读该文件再同步 |
 | ControlMaster 坑 | 未在文件中找到具体记录（未确认项，见 §8） |
 | 连接超时 | 检查 gf-bastion 在线状态与隧道端口是否变化 |
 
@@ -307,7 +308,7 @@ WSL 侧由 `_wsl_hpc_phase1/2.sh` 从 `/mnt/c/Users/13389/.ssh` 复制密钥并 
   - 文献弹药库：docs/research_track_20260813.md（9 项可落地实验，已并入 ORCHESTRATION_PLAN §七）
   - 进行中：Phase 1 SFT 提交前监管审查（4 审查员 workflow）；D5 账单实测备好待提交
 - **2026-08-13 晚（Phase 1 出数）**：sft_phase1 训练完成——自定义 63.9% / **官方 EX 60.8%**（难度 84.7/67.6/42.5/25.9），**Gate G2 通过（≥55%）**；监管审查抓 2 个必崩 bug 全部修复（remove_columns 崩溃 + apply_chat_template 返回 list 崩溃，冒烟测试回归验证）；D5 实测 50 题 = $0.01（大规模备料约 ¥10-20 级）
-- **随后**：Phase 2 GRPO（T2.1 三级奖励从 SFT 检查点起，preflight+监管后提交）→ T2.2 四分量对照 → L2 MPEV 官方口径验证 → L1 技术报告。
+- **随后**：T2.2 四分量稠密奖励（format+exec+atomic，finer 型）+ 梯度修复（dapo/去 std/静默组过滤）——T2.1 负结果（-10pp）证明稀疏奖励从强 SFT 起点必退化，文献路线为对症药 → L2 MPEV 官方口径验证 → L1 技术报告。
 - **深度路线（2026-08-13 确定，见 PAPER_PLAN §七）**：L4（改进论文）→ **L7 机制理论**（用现有数据、0 新 GPU、优先于 L6）→ L8 跨任务范式（Gate-4 决定）；L9 开源随时可并行。GPU 预算：L4 ~3 天 / L5 ~2 天 / L7 0 新实验 / L8 4-6 月（可选）。
 
 ---
