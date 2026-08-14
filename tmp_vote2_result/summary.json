@@ -1,0 +1,9 @@
+{
+  "method": "5prompt_vote",
+  "lora": "/gpfs/work/aac/jiahuiwang24/reasoning_generator_3b/checkpoints/sft_v2",
+  "match_rate": 0.7272727272727273,
+  "match_count": 752,
+  "start_index": 0,
+  "limit": 1034,
+  "elapsed_seconds": 13620.6
+}
