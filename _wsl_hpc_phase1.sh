@@ -4,7 +4,7 @@ mkdir -p ~/.ssh && chmod 700 ~/.ssh
 cp -f /mnt/c/Users/13389/.ssh/id_ed25519 ~/.ssh/id_ed25519
 cp -f /mnt/c/Users/13389/.ssh/id_ed25519.pub ~/.ssh/id_ed25519.pub
 chmod 600 ~/.ssh/id_ed25519
-H="ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=45 -o ServerAliveInterval=20 -o ServerAliveCountMax=5 -J ASUS@6.tcp.cpolar.cn:10889 -i ~/.ssh/id_ed25519 jiahuiwang24@login.hpc.xjtlu.edu.cn"
+H="ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=45 -o ServerAliveInterval=20 -o ServerAliveCountMax=5 -J ASUS@6.tcp.cpolar.cn:12592 -i ~/.ssh/id_ed25519 jiahuiwang24@login.hpc.xjtlu.edu.cn"
 
 echo "=== PHASE1 start $(date '+%H:%M:%S') ==="
 $H 'echo "HPC=$(hostname)"
