@@ -1,0 +1,38 @@
+{
+  "method": "5p_fewshot_vote",
+  "lora": "/gpfs/work/aac/jiahuiwang24/reasoning_generator_3b/checkpoints/sft_v2",
+  "temperature": 0.0,
+  "n_prompts": 6,
+  "fewshot_used": [
+    {
+      "question": "How many film are there?",
+      "db_id": "film_rank",
+      "difficulty": "easy",
+      "join_count": 0,
+      "response_len": 138
+    },
+    {
+      "question": "what is the highest point in the state with the capital des moines",
+      "db_id": "geo",
+      "difficulty": "medium",
+      "join_count": 1,
+      "response_len": 278
+    },
+    {
+      "question": "Where did li dong publish in 2016",
+      "db_id": "scholar",
+      "difficulty": "hard",
+      "join_count": 3,
+      "response_len": 406
+    }
+  ],
+  "fewshot_source": "/gpfs/work/aac/jiahuiwang24/reasoning_generator_3b/outputs/fewshot_examples.json",
+  "fewshot_trimmed_items": 0,
+  "fewshot_dropped_items": 0,
+  "match_rate": 0.7330754352030948,
+  "match_count": 758,
+  "start_index": 0,
+  "limit": 1034,
+  "elapsed_seconds": 20840.8,
+  "note": "第 6 视角 = build_prompt 的 Instructions 前插入 '## Worked Examples'(3 条 train 侧执行正确轨迹, Q+<think>+SQL); 其余 5 视角与原版eval_5p_t10 完全一致(import build_prompt_variants 复用); 6 视角 × 1 采样(默认温度 0 贪心) → 执行分组投票, 口径与 5p 基线一致。few-shot 示例严禁 dev 轨迹(收集端 dev.json 重叠过滤 + 评估端重叠中止)。"
+}
