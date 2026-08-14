@@ -5,7 +5,7 @@ cp -f /mnt/c/Users/13389/.ssh/id_ed25519 ~/.ssh/id_ed25519
 cp -f /mnt/c/Users/13389/.ssh/id_ed25519.pub ~/.ssh/id_ed25519.pub
 chmod 600 ~/.ssh/id_ed25519
 
-SRC="/mnt/c/Users/13389/Desktop/女朋�?reasoning_generator_3b/src/gen_reasoning_data.py"
+SRC="/mnt/c/Users/13389/Desktop/女朋友/reasoning_generator_3b/src/gen_reasoning_data.py"
 DST="jiahuiwang24@login.hpc.xjtlu.edu.cn:/gpfs/work/aac/jiahuiwang24/reasoning_generator_3b/src/gen_reasoning_data.py"
 
 echo "=== PHASE2 upload $(date '+%H:%M:%S') ==="
