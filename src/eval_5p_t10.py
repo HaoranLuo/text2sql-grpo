@@ -1,0 +1,237 @@
+#!/usr/bin/env python3
+"""高温 5prompt 投票评估（T=1.0 采样版）
+
+在 eval_5prompt_agent 基础上增加 --temperature 参数（默认 1.0）并透传到
+model.generate：temperature > 0 时开启 do_sample 纯温度采样（top_p/top_k 置空，
+与 ReasoningGeneratorAgent.__init__ 置空 generation_config 的惯例一致）；
+temperature == 0 时退化为原版贪心解码（do_sample=False）。
+
+用法:
+    python src/eval_5p_t10.py --lora-path checkpoints/sft_v2 \
+        --output-dir outputs/eval_5p_t10_sft_v2 --n-prompts 5 \
+        --limit 1034 --temperature 1.0
+
+5 种 prompt 视角 + 执行结果多数投票（与 eval_5prompt_agent 完全一致的口径：
+full_rows 比较 + truncated 检查；items/summary 输出格式不变，summary 多一个
+temperature 字段用于实验溯源）。
+"""
+import argparse
+import json
+import time
+from collections import Counter
+from pathlib import Path
+
+import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
+PROJECT = Path(__file__).resolve().parent.parent
+import sys
+sys.path.insert(0, str(PROJECT / 'src'))
+from reasoning_generator_agent import ReasoningGeneratorAgent
+from spider_utils import SpiderLoader, DatabaseExecutor, compare_execution_results
+
+BASE_MODEL = str(PROJECT / 'models' / 'Qwen2.5-Coder-3B-Instruct')  # 默认，可用 --base-model 覆盖
+SPIDER = str(PROJECT / 'data' / 'spider_data')
+
+
+def build_prompt_variants(question: str, ddl: str) -> list:
+    """5/7 种 prompt 视角（p1-p5 为原始 5 视角；p6/p7 用于 7p 验证）"""
+    p1 = ReasoningGeneratorAgent.build_prompt(question=question, ddl_schema=ddl, dialect='sqlite')
+    schema_lines = []
+    current = None
+    for line in ddl.split('\n'):
+        line = line.strip()
+        if line.startswith('CREATE TABLE'):
+            name = line.replace('CREATE TABLE', '').replace('(', '').strip().strip('"').strip('`')
+            current = name
+            schema_lines.append(f"Table {name}:")
+        elif current and line and not line.startswith(')'):
+            schema_lines.append(f"  - {line.rstrip(',')}")
+        elif line == ');':
+            current = None
+    p2 = f"""Given the database schema and question, generate the SQLite SQL.
+
+Schema:
+{chr(10).join(schema_lines)}
+
+Question: {question}
+
+SQL:"""
+    p3 = f"""Database schema:
+{ddl}
+
+Question: {question}
+
+Think carefully, then output ONLY the SQL query in a ```sql block."""
+    p4 = f"""Database schema:
+{ddl}
+
+Question: {question}
+
+IMPORTANT: Use the MINIMUM number of tables. If one table suffices, do NOT join others. Output SQL in ```sql block."""
+    p5 = f"""Schema:
+{ddl}
+
+Question: {question}
+
+Write the SQL query. Only output SQL, nothing else."""
+    # p6/p7: 7p 验证用（第 6、7 视角）
+    p6 = f"""Database schema:
+{ddl}
+
+Question: {question}
+
+Step by step: 1) which tables and columns are needed; 2) what filters/joins;
+3) the SQLite SQL. Output the final SQL in a ```sql block."""
+    p7 = f"""Database schema:
+{ddl}
+
+Question: {question}
+
+Write the SQL as a SINGLE line without any comments or explanation."""
+    return [p1, p2, p3, p4, p5, p6, p7]
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--lora-path', default=None, help='LoRA adapter 目录（省略=无 LoRA 基线）')
+    parser.add_argument('--output-dir', required=True, help='输出目录')
+    parser.add_argument('--limit', type=int, default=100)
+    parser.add_argument('--start-index', type=int, default=0)
+    parser.add_argument('--max-new-tokens', type=int, default=256)
+    parser.add_argument('--n-prompts', type=int, default=5, choices=[5, 7],
+                        help='投票用多少个 prompt 视角 (5 或 7)')
+    parser.add_argument('--base-model', default=BASE_MODEL,
+                        help='基础模型路径（默认 3B）')
+    parser.add_argument('--temperature', type=float, default=1.0,
+                        help='采样温度（默认 1.0；>0 开启 do_sample 采样并透传给 generate，'
+                             '=0 退化为原版贪心解码）')
+    args = parser.parse_args()
+
+    lora = args.lora_path
+    out_dir = Path(args.output_dir)
+    limit = args.limit
+    start_index = args.start_index
+    n_prompts = args.n_prompts
+    base_model = args.base_model
+    temperature = args.temperature
+    print(f"{n_prompts}prompt投票 | LoRA: {lora} | base: {base_model} | "
+          f"{limit} 条 (start={start_index}) | temperature={temperature}")
+
+    tokenizer = AutoTokenizer.from_pretrained(base_model, local_files_only=True, trust_remote_code=True)
+    tokenizer.pad_token = tokenizer.eos_token
+    tokenizer.pad_token_id = tokenizer.eos_token_id
+    base = AutoModelForCausalLM.from_pretrained(
+        base_model, torch_dtype=torch.bfloat16, device_map={'': 0},
+        local_files_only=True, trust_remote_code=True)
+    if lora:
+        from peft import PeftModel
+        model = PeftModel.from_pretrained(base, lora)
+    else:
+        model = base
+    model.eval()
+    model.config.pad_token_id = tokenizer.eos_token_id
+
+    loader = SpiderLoader(SPIDER)
+    executor = DatabaseExecutor(SPIDER)
+    items = loader.load_dev(limit=limit, start_index=start_index)
+
+    match_count = 0
+    results = []
+    start_t = time.time()
+
+    for i, item in enumerate(items):
+        db_id, question, gold_sql = item['db_id'], item['question'], item['query']
+        ddl, _ = loader.get_ddl_with_source(db_id)
+        prompts = build_prompt_variants(question, ddl)[:n_prompts]
+
+        exec_results = []   # (full_rows_tuple, truncated_flag, sql)
+        for p in prompts:
+            chat = tokenizer.apply_chat_template(
+                [{'role': 'user', 'content': p}], tokenize=False, add_generation_prompt=True)
+            enc = tokenizer(chat, return_tensors='pt', truncation=True, max_length=1536).to('cuda:0')
+            in_len = enc['input_ids'].shape[1]
+            with torch.inference_mode():
+                if temperature > 0:
+                    # 纯温度采样：top_p/top_k 置空，避免 generation_config.json
+                    # 里的 top_p/top_k 与温度混叠（对齐 agent 侧置空惯例）。
+                    out = model.generate(
+                        **enc,
+                        max_new_tokens=args.max_new_tokens,
+                        do_sample=True,
+                        temperature=temperature,
+                        top_p=None,
+                        top_k=None,
+                        pad_token_id=tokenizer.eos_token_id,
+                    )
+                else:
+                    # temperature == 0：与原版 eval_5prompt_agent 完全一致的贪心解码
+                    out = model.generate(**enc, max_new_tokens=args.max_new_tokens,
+                                         do_sample=False, pad_token_id=tokenizer.eos_token_id)
+            text = tokenizer.decode(out[0][in_len:], skip_special_tokens=True)
+            parsed = ReasoningGeneratorAgent.extract_sql(text)
+            if parsed['parse_success']:
+                r = executor.execute(db_id, parsed['sql'])
+                if r['success']:
+                    exec_results.append((tuple(tuple(row) for row in r['full_rows']),
+                                         r['full_rows_truncated'], parsed['sql']))
+
+        # 执行结果分组投票（Query and Conquer 式，arXiv 2503.24364）：
+        # 按执行结果分组计数，选最大组；平局时优先更短的 SQL
+        # （修复后口径：full_rows 比较 + truncated 则判负）
+        voted_rows, vc, voted_truncated, selected_sql = [], 0, False, ""
+        if exec_results:
+            groups = {}
+            for rows, truncated, sql in exec_results:
+                g = groups.setdefault(rows, {"count": 0, "truncated": False,
+                                             "shortest_sql": sql})
+                g["count"] += 1
+                g["truncated"] = g["truncated"] or truncated
+                if len(sql) < len(g["shortest_sql"]):
+                    g["shortest_sql"] = sql
+            best = max(groups.values(), key=lambda g: g["count"])
+            voted_rows = [list(row) for row in
+                          next(k for k, v in groups.items() if v is best)]
+            vc = best["count"]
+            voted_truncated = best["truncated"]
+            selected_sql = best["shortest_sql"]
+
+        gold_r = executor.execute(db_id, gold_sql)
+        gold_rows = gold_r['full_rows'] if gold_r['success'] else []
+        gold_truncated = gold_r.get('full_rows_truncated', False) if gold_r['success'] else False
+
+        if gold_r['success'] and not voted_truncated and not gold_truncated:
+            is_match = compare_execution_results(
+                voted_rows, gold_rows, gold_sql=gold_sql)['match']
+        else:
+            is_match = False
+        if is_match:
+            match_count += 1
+
+        results.append({'di': item['dataset_index'], 'match': is_match,
+                        'votes': vc, 'truncated': voted_truncated,
+                        'db_id': db_id,
+                        'predicted_sql': selected_sql})
+        if (i + 1) % 10 == 0:
+            print(f"  [{i+1}/{limit}] match={match_count}/{i+1} ({match_count/(i+1):.1%})")
+
+    elapsed = time.time() - start_t
+    rate = match_count / limit
+    print(f"\n=== 5prompt投票 T={temperature} RESULT ===")
+    print(f"Match: {match_count}/{limit} ({rate:.1%})")
+    print(f"Time: {elapsed:.0f}s")
+    print(f"LoRA: {lora}")
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    with open(out_dir / 'summary.json', 'w') as f:
+        json.dump({'method': '5prompt_vote', 'lora': lora,
+                   'temperature': temperature,
+                   'match_rate': rate, 'match_count': match_count,
+                   'start_index': start_index, 'limit': limit,
+                   'elapsed_seconds': round(elapsed, 1)}, f, indent=2)
+    with open(out_dir / 'items.json', 'w') as f:
+        json.dump(results, f, indent=2)
+
+
+if __name__ == '__main__':
+    main()
