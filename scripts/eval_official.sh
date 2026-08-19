@@ -21,8 +21,8 @@ dev = json.load(open('$SPIDER/dev.json'))
 pred_lines, gold_lines = [], []
 for it in items:
     sql = (it.get('predicted_sql') or '').strip().rstrip(';')
-    # P0 修复(T0.4): 先去掉 -- 行注释再折叠, 否则折叠后注释吞掉整条 SQL
-    sql = re.sub(r'^\s*--.*$', '', sql, flags=re.MULTILINE)
+    # P0 修复(T0.4)+P0.2 扩展(T1-3): 先去掉 -- 注释(行首与行内)再折叠, 否则折叠后注释吞掉整条 SQL
+    sql = re.sub(r'--[^\n]*', '', sql)
     sql = ' '.join(sql.split())  # 折叠空白为单空格
     if not sql:
         continue  # parse 失败 → 跳过（同步跳过 gold）

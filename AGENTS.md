@@ -17,7 +17,7 @@
 
 ## 环境速记
 
-- 计算：西交利物浦 HPC（`ssh hpc`，经 gf-bastion cpolar 隧道端口 14646；断线用 `scripts/ssh_hpc.ps1` 重试）。
+- 计算：西交利物浦 HPC（`ssh hpc`，经 gf-bastion cpolar 隧道端口 11545；断线用 `scripts/ssh_hpc.ps1` 重试）。
 - 关键权重：`models/FINER-SQL-3B-Spider`（复刻基准）、checkpoints/sft_v2（当前推理主力）。
 - GitHub 需要本机 7897 代理（Vortex）在线；HPC 直连 GitHub 正常。
 - 当前主线：训练侧 RL 已封盘（T2.1/2/3 三连负）；最优 = 5p 投票×SFT v1 官方 70.1%；重心在投票管线升级 + L7 机制论文数据（E0-E4）。

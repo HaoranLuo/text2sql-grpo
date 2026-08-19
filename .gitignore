@@ -35,3 +35,8 @@ s1.sh
 scripts/run_api_gen.sh
 scripts/s1.sh
 .research_tmp/
+
+# 实验临时分析/下载的外部研究仓库（不提交）
+tmp_ab_analysis/
+tmp_idea_research/
+tmp_vllm_verify/
