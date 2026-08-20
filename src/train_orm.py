@@ -270,9 +270,11 @@ def evaluate_dev(model, tokenizer, dev_ds: Dataset,
     c_list: List[int] = []
     q_list: List[int] = []
     for i in range(0, len(dev_ds), batch_size):
-        batch = dev_ds[i:i + batch_size]
-        features = [{k: b[k] for k in ("input_ids", "attention_mask", "labels")}
-                    for b in batch]
+        n = min(batch_size, len(dev_ds) - i)
+        # 按索引取行（此 datasets 版本迭代切片会产出列名字符串，见 2095363 教训）
+        features = [{k: dev_ds[i + j][k]
+                     for k in ("input_ids", "attention_mask", "labels")}
+                    for j in range(n)]
         batch_in = collator(features)
         out = model(input_ids=batch_in["input_ids"].to(device),
                     attention_mask=batch_in["attention_mask"].to(device),
@@ -280,8 +282,8 @@ def evaluate_dev(model, tokenizer, dev_ds: Dataset,
         logits = out.logits[:, -1, :].float()  # left padding → 末位 = 打分位
         p_yes = _p_yes_from_logits(logits.cpu().numpy(), yes_id, no_id)
         p_list.extend(float(x) for x in p_yes)
-        c_list.extend(int(b["is_correct"]) for b in batch)
-        q_list.extend(int(b["question_id"]) for b in batch)
+        c_list.extend(int(dev_ds[i + j]["is_correct"]) for j in range(n))
+        q_list.extend(int(dev_ds[i + j]["question_id"]) for j in range(n))
     return ranking_metrics(np.asarray(p_list), np.asarray(c_list, dtype=int),
                            q_list, questions)
 

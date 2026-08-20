@@ -393,6 +393,11 @@ def cpu_m8_fallback(cpu_scorer: Any, payloads: List[Tuple[int, str, str]],
     rng = random.Random(seed)
     out: List[Dict[str, Any]] = []
     for _qi, _key, prompt in payloads:
+        if not prompt:
+            out.append({"m": m, "votes": None, "vote_rate": 0.5, "soft_mean": 0.5,
+                        "per_sample": None,
+                        "note": "cpu-fallback-no-prompt-default-0.5"})
+            continue
         enc = tok.apply_chat_template(
             [{"role": "user", "content": prompt}],
             tokenize=True, add_generation_prompt=True, return_dict=True)
