@@ -1,7 +1,7 @@
 #!/bin/bash
-# GO/NO-GO 门：单次贪心生成 + 官方 EX（Spider dev 1034 题）
+# GO/NO-GO 门 步骤 1/2：单次贪心生成（GPU 3090，仅生成 items.json）
 # 用法: sbatch --export=MODEL=...,OUT=... scripts/gate_single_shot.slurm
-# MODEL = plain HF 模型目录（合并后 sft_v3 或 retry_cpt/checkpoint-N）
+# 官方 EX 评估由 gate_official.slurm（CPU）接续
 #SBATCH --job-name=gate_ss
 #SBATCH --partition=gpudebug
 #SBATCH --qos=gpudebug
@@ -20,10 +20,7 @@ MODEL=${MODEL:?需 MODEL env}
 OUT=${OUT:?需 OUT env}
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 
-echo "=== 单次贪心评估: $MODEL -> $OUT ==="
+echo "=== 单次贪心生成: $MODEL -> $OUT ==="
 $PY src/gen_single_shot.py --model-path "$MODEL" --output-dir "$OUT" --limit 1034
-
-echo "=== 官方 EX ==="
-bash scripts/eval_official.sh "$OUT/items.json" "$OUT/official"
 
 echo "Done: $(date)"

@@ -67,16 +67,26 @@ def main():
               trust_remote_code=True)
     sp = SamplingParams(temperature=0.0, top_p=1.0, max_tokens=args.max_new_tokens)
 
-    prompt_ids = [ids for _, ids in per_item]
-    outputs = llm.generate(prompt_token_ids=prompt_ids, sampling_params=sp)
-    texts = [o.outputs[0].text for o in outputs]
+    # vLLM 0.11：prompt 以 dict 形式传 prompt_token_ids（不接受关键字参数）
+    texts = []
+    chunk = 200
+    for i in range(0, len(per_item), chunk):
+        batch = per_item[i:i + chunk]
+        reqs = [{"prompt_token_ids": ids} for _, ids in batch]
+        outs = llm.generate(reqs, sampling_params=sp)
+        texts.extend(o.outputs[0].text for o in outs)
+        print(f"[single-shot] {min(i + chunk, len(per_item))}/{len(per_item)} "
+              f"题生成完成", flush=True)
 
     # 解析 SQL + 执行（线程池）
     executor = DatabaseExecutor(SPIDER)
 
     def process(job):
         it, text = job
-        sql = VavSampler.extract_sql(text)
+        parsed = VavSampler.extract_sql(text)
+        # P0: VavSampler.extract_sql 返回 dict {sql, parse_success, parse_method}，
+        # 而 eval_official.sh 期望 predicted_sql 为纯字符串 —— 解包取 sql 字段
+        sql = parsed["sql"] if isinstance(parsed, dict) else parsed
         if not sql:
             return it, "", False, None
         try:

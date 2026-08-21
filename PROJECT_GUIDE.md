@@ -19,7 +19,7 @@
 - 评估：官方 test-suite 评估器（test_suite_eval）+ 原始 Spider 评估器（original_spider_eval，FINER 同源链）+ 自研自定义执行匹配口径（仅内部诊断）
 - 解析/原子奖励：sqlglot（sql2ops 原子操作序列，Jaccard 相似度）
 - 数据生成/推理蒸馏：DeepSeek API（V4 Flash，教师生成推理轨迹+SQL）
-- 计算：西交利物浦 HPC（slurm，A40/3090，gpudebug 分区），经女朋友电脑 cpolar 隧道跳板访问
+- 计算：西交利物浦 HPC（slurm，A40/3090，gpudebug 分区）。主通道=校内留守电脑 Tailscale 直连（2026-08-21 起）；备用=女朋友电脑 cpolar 隧道
 - 投票：多 prompt 视角投票 / 低温采样投票 / vav 执行分组投票 / MPEV（多视角×采样）
 
 **数据集**：

@@ -56,15 +56,17 @@ def main():
         return tokenizer.apply_chat_template(msgs, tokenize=False,
                                              add_generation_prompt=False)
 
-    ds = Dataset.from_list([{"text": to_text(e["messages"])} for e in data])
-
-    def tokenize_fn(ex):
-        enc = tokenizer(ex["text"], truncation=True, max_length=args.max_length)
-        enc["labels"] = enc["input_ids"]  # CPT：全序列 LM（无掩码）
-        return enc
-
-    ds = ds.map(tokenize_fn, remove_columns=["text"],
-                desc="tokenize", num_proc=1)
+    # 直接 python 循环 tokenize（不用 Dataset.map——2095363 教训：该版本
+    # datasets 在 map/迭代上有怪癖）；只留 input_ids/attention_mask，
+    # labels 由 DataCollatorForLanguageModeling(mlm=False) 从 input_ids 复制（CPT 口径）
+    records = []
+    for e in data:
+        enc = tokenizer(to_text(e["messages"]), truncation=True,
+                        max_length=args.max_length)
+        records.append({"input_ids": enc["input_ids"],
+                        "attention_mask": enc["attention_mask"]})
+    ds = Dataset.from_list(records)
+    print(f"[retry-cpt] tokenize 完成: {len(ds)} 条")
 
     torch.manual_seed(args.seed)
     model = AutoModelForCausalLM.from_pretrained(

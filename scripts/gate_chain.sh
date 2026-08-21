@@ -1,11 +1,13 @@
 #!/bin/bash
-# RetrySQL 后置链 v2：训练结束 → ckpt-100 门(gen+official) → 终模门(gen+official) → 汇总
-# 每个门 = gate_single_shot（GPU 生成）+ gate_official（CPU 官方 EX）两步。
+# RetrySQL 总链 v3：smoke(3090) → 基线门(gen+official) → 等 CPT 训练 → ckpt-100 门 → 终模门
+# gpudebug QOS MaxSubmit=1：GPU 作业全部经本链串行提交，官方 EX 走 cpu6348。
+# 用法: nohup bash scripts/gate_chain.sh <smoke_job> <train_job> &
 cd /gpfs/work/aac/jiahuiwang24/reasoning_generator_3b || exit 1
-LOG=logs/retry_chain.log
-TRAIN_JOB=$1
-[ -z "$TRAIN_JOB" ] && { echo "usage: $0 <train_job_id>" >&2; exit 1; }
-echo "$(date '+%F %T') retry chain v2 start (train=$TRAIN_JOB)" >> "$LOG"
+LOG=logs/gate_chain.log
+SMOKE=$1
+TRAIN=$2
+[ -z "$SMOKE" ] || [ -z "$TRAIN" ] && { echo "usage: $0 <smoke_job> <train_job>" >&2; exit 1; }
+echo "$(date '+%F %T') gate chain v3 start (smoke=$SMOKE train=$TRAIN)" >> "$LOG"
 
 wait_done() {
     local jid=$1
@@ -13,7 +15,7 @@ wait_done() {
         local st
         st=$(squeue -j "$jid" -h -o '%T' 2>/dev/null)
         [ -z "$st" ] && break
-        sleep 120
+        sleep 60
     done
     local end
     end=$(sacct -j "$jid" -n -o State -X 2>/dev/null | tr -d ' ' | head -1)
@@ -37,7 +39,9 @@ run_gate() {
     echo "$(date '+%F %T') gate result: $model EX=$ex" >> "$LOG"
 }
 
-wait_done "$TRAIN_JOB"
+wait_done "$SMOKE"
+run_gate checkpoints/sft_v3_merged outputs/gate_baseline_sftv3
+wait_done "$TRAIN"
 run_gate checkpoints/retry_cpt/checkpoint-100 outputs/gate_retry_ckpt100
 run_gate checkpoints/retry_cpt outputs/gate_retry_final
-echo "$(date '+%F %T') retry chain done" >> "$LOG"
+echo "$(date '+%F %T') gate chain done" >> "$LOG"
