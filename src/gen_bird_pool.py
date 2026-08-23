@@ -18,8 +18,11 @@
   - prompt = BIRD schema DDL（sqlite_master 的 CREATE TABLE 语句按表名排序
     拼接）+ question + evidence（有值才加），复用
     ReasoningGeneratorAgent.build_prompt canonical 模板（dialect=sqlite）
-    + chat template（add_generation_prompt=True）；截断 3072 token
-    （实测 1534 题 prompt 最长 2386 token，3072 全量不截断）。
+    + chat template（add_generation_prompt=True）；截断 3072 token。
+    evidence 来源（--evidence-json 可选注入，默认不注入与原池同口径）：
+    --evidence-json 传入且文件存在时，auto evidence（SEED 式，question_id→文本）
+    优先、dev.json 官方 evidence 兜底；不传该参数时行为与改造前完全一致
+    （仅 dev.json 官方 evidence）。
   - 解析 = finer_port/sampler.py VavSampler.extract_sql（返回 dict，
     取 ["sql"]；与 Spider 管线同口径）。
   - 输出 outputs/eval_pool_bird/items.json：dataset_index=question_id、db_id、
@@ -88,6 +91,11 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         description="BIRD dev 大候选池生成：4 checkpoint × n=16 采样（单引擎多 LoRA）")
     p.add_argument("--data-json", default=DEFAULT_DATA_JSON)
     p.add_argument("--db-root", default=DEFAULT_DB_ROOT)
+    p.add_argument("--evidence-json", default=None,
+                   help="SEED 式自动 evidence JSON（question_id→evidence 文本，如 "
+                        "data/bird/auto_evidence.json）。不传则仅用 dev.json 官方 "
+                        "evidence（与原池同口径）；传入且文件存在时 auto evidence "
+                        "优先、官方兜底，文件缺失回退官方 evidence。")
     p.add_argument("--output-dir", default=DEFAULT_OUTPUT_DIR)
     p.add_argument("--limit", type=int, required=True,
                    help="评估条数（全量 1534；冒烟 10）——必填，防误触全量")
@@ -119,7 +127,10 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
 # BIRD 数据加载（dev.json + sqlite_master DDL）
 # ---------------------------------------------------------------------------
 
-def load_bird_items(data_json: str, limit: int, start_index: int) -> List[Dict[str, Any]]:
+def load_bird_items(data_json: str, limit: int, start_index: int,
+                    evidence_map: Optional[Dict[str, str]] = None) -> List[Dict[str, Any]]:
+    """装载 dev.json 条目。evidence_map（auto evidence，question_id→文本）优先，
+    缺失时回退 dev.json 官方 evidence；evidence_map=None 时与原池同口径。"""
     with open(data_json, "r", encoding="utf-8") as fh:
         data = json.load(fh)
     if not isinstance(data, list):
@@ -131,7 +142,8 @@ def load_bird_items(data_json: str, limit: int, start_index: int) -> List[Dict[s
             "di": int(it["question_id"]),
             "db_id": it["db_id"],
             "question": it["question"],
-            "evidence": it.get("evidence") or "",
+            "evidence": ((evidence_map or {}).get(str(it["question_id"]))
+                         or it.get("evidence") or ""),
             "gold_sql": it.get("SQL") or "",
             "difficulty": it.get("difficulty", ""),
         })
@@ -163,6 +175,8 @@ def build_run_config(args: argparse.Namespace, lora_names: List[str]) -> Dict[st
         "evaluator_type": EVALUATOR_TYPE,
         "data_json": str(Path(args.data_json).resolve()),
         "db_root": str(Path(args.db_root).resolve()),
+        "evidence_json": (str(Path(args.evidence_json).resolve())
+                          if args.evidence_json else None),
         "start_index": args.start_index,
         "limit": args.limit,
         "base_model": str(Path(args.base_model).resolve()),
@@ -360,7 +374,8 @@ def main() -> None:
     print(f"BIRD 候选池 | loras={lora_names} | n={args.n} | T={args.temperature} "
           f"seed={args.seed} top_p={args.top_p} | limit={args.limit} "
           f"(start={args.start_index}) | checkpoint-every={args.checkpoint_every} | "
-          f"gen budget={args.max_gen_seconds}s")
+          f"gen budget={args.max_gen_seconds}s | "
+          f"evidence-json={args.evidence_json or '(none, 官方 evidence 口径)'}")
 
     # ---- tokenizer（与 eval_pool_b1 相同设置）----
     tokenizer = AutoTokenizer.from_pretrained(args.base_model, local_files_only=True,
@@ -368,7 +383,23 @@ def main() -> None:
     tokenizer.pad_token = tokenizer.eos_token
     tokenizer.pad_token_id = tokenizer.eos_token_id
 
-    items = load_bird_items(args.data_json, args.limit, args.start_index)
+    # ---- auto evidence（--evidence-json；缺省 None = 与原池同口径）----
+    evidence_map: Optional[Dict[str, str]] = None
+    if args.evidence_json:
+        ev_path = Path(args.evidence_json)
+        if ev_path.is_file():
+            with open(ev_path, "r", encoding="utf-8") as fh:
+                evidence_map = json.load(fh)
+            print(f"Auto evidence loaded: {len(evidence_map)} entries from {ev_path}")
+        else:
+            print(f"[WARN] --evidence-json file not found ({ev_path}), "
+                  f"回退 dev.json 官方 evidence")
+
+    items = load_bird_items(args.data_json, args.limit, args.start_index,
+                            evidence_map)
+    n_auto_ev = sum(1 for it in items
+                    if evidence_map and str(it["dataset_index"]) in evidence_map)
+    print(f"evidence 命中: auto={n_auto_ev}/{len(items)} items")
     requested_order = [it["dataset_index"] for it in items]
     requested_set = set(requested_order)
     src_by_qid = {it["dataset_index"]: it for it in items}
@@ -617,6 +648,8 @@ def main() -> None:
             "seed={s} top_p={p}，vLLM 单请求 n=16，单引擎 max_loras={ml} 逐模型换 "
             "LoRARequest）。prompt = sqlite_master DDL + question + evidence（有值才加，"
             "ReasoningGeneratorAgent.build_prompt canonical 模板）+ chat template，"
+            "evidence 来源 = auto_evidence.json（SEED 式，--evidence-json）优先、"
+            "dev.json 官方兜底；不传 --evidence-json 时与原池同口径（仅官方 evidence）。"
             "截断 {mpt} token；解析 = VavSampler.extract_sql（与 Spider 管线同口径）。"
             "items.json 不去重（裁决阶段做）。serving: lora=vLLM LoRARequest；"
             "merged=peft 合并权重回退。gpudebug 50min 切片：生成预算 "
